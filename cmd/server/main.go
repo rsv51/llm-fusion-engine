@@ -1,6 +1,7 @@
 package main
 
 import (
+	"strings"
 	"fmt"
 	"llm-fusion-engine/internal/api/admin"
 	"llm-fusion-engine/internal/api/v1"
@@ -59,7 +60,12 @@ func main() {
 	
 	// NoRoute handler for SPA routing
 	router.NoRoute(func(c *gin.Context) {
-		c.File("./web/dist/index.html")
+		// Only serve index.html for GET requests that are not API calls
+		if c.Request.Method == "GET" && !strings.HasPrefix(c.Request.URL.Path, "/api/") && !strings.HasPrefix(c.Request.URL.Path, "/v1/") {
+			c.File("./web/dist/index.html")
+			return
+		}
+		c.JSON(404, gin.H{"code": "PAGE_NOT_FOUND", "message": "Page not found"})
 	})
 
 	// 5. Start Server
