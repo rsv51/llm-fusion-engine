@@ -25,9 +25,8 @@ COPY --from=frontend-builder /app/web/dist ./web/dist
 # Copy the built backend from the backend-builder stage
 COPY --from=backend-builder /app/server ./server
 
-# Copy the database file (assuming it's pre-populated or will be created)
-# For production, you'd likely mount a volume for the database.
-COPY fusion.db ./fusion.db
+# The database file will be created by the application on first run.
+# For production, you should mount a volume to /app/fusion.db to persist data.
 
 EXPOSE 8080
 
