@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"llm-fusion-engine/internal/database"
 	"net/http"
+	"strconv"
 
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
@@ -35,21 +36,43 @@ func (h *GroupHandler) CreateGroup(c *gin.Context) {
 	c.JSON(http.StatusOK, group)
 }
 
-// GetGroups retrieves all groups with pagination response format.
+// GetGroups retrieves all groups with pagination.
 func (h *GroupHandler) GetGroups(c *gin.Context) {
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	pageSize, _ := strconv.Atoi(c.DefaultQuery("pageSize", "20"))
+
+	if page < 1 {
+		page = 1
+	}
+	if pageSize < 1 || pageSize > 100 {
+		pageSize = 20
+	}
+
+	offset := (page - 1) * pageSize
+
 	var groups []database.Group
-	if err := h.db.Find(&groups).Error; err != nil {
+	var total int64
+
+	// Count total records
+	if err := h.db.Model(&database.Group{}).Count(&total).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to count groups"})
+		return
+	}
+
+	// Get paginated records
+	if err := h.db.Offset(offset).Limit(pageSize).Find(&groups).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve groups"})
 		return
 	}
-	
-	// Return in pagination response format for frontend compatibility
+
 	c.JSON(http.StatusOK, gin.H{
-		"items":      groups,
-		"total":      len(groups),
-		"page":       1,
-		"pageSize":   len(groups),
-		"totalPages": 1,
+		"data": groups,
+		"pagination": gin.H{
+			"page":      page,
+			"pageSize":  pageSize,
+			"total":     total,
+			"totalPage": (total + int64(pageSize) - 1) / int64(pageSize),
+		},
 	})
 }
 

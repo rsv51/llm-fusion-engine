@@ -19,8 +19,8 @@ export const Groups: React.FC = () => {
     try {
       setLoading(true)
       const response = await groupsApi.getGroups()
-      setGroups(response.items)
-    } catch (error) {
+      setGroups(response.data)
+     } catch (error) {
       console.error('加载分组失败:', error)
     } finally {
       setLoading(false)

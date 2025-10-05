@@ -29,7 +29,7 @@ export const groupsApi = {
 
   // 更新分组
   async updateGroup(id: number, data: UpdateGroupRequest): Promise<Group> {
-    return api.patch(`/admin/groups/${id}`, data)
+  	return api.put(`/admin/groups/${id}`, data)
   },
 
   // 删除分组

@@ -33,7 +33,7 @@ FROM golang:1.21-alpine AS backend-builder
 WORKDIR /app
 COPY . .
 RUN go mod tidy
-RUN CGO_ENABLED=0 GOOS=linux go build -o /app/server ./cmd/server/main.go
+RUN CGO_ENABLED=0 GOOS=linux go build -o /app/llm-fusion-engine ./cmd/server/main.go
 
 # Stage 3: Create the final image
 FROM alpine:latest
@@ -44,7 +44,7 @@ RUN addgroup -S appgroup && adduser -S appuser -G appgroup
 
 # Copy built assets
 COPY --from=frontend-builder /app/web/dist ./web/dist
-COPY --from=backend-builder /app/server ./server
+COPY --from=backend-builder /app/llm-fusion-engine .
 
 # Set ownership for the entire app directory
 RUN chown -R appuser:appgroup /app
@@ -53,4 +53,4 @@ RUN chown -R appuser:appgroup /app
 USER appuser
 
 EXPOSE 8080
-CMD ["./server"]
+CMD ["./llm-fusion-engine"]

@@ -11,12 +11,16 @@ export interface PaginationParams {
   pageSize: number
 }
 
+export interface PaginationInfo {
+	page: number
+	pageSize: number
+	total: number
+	totalPage: number
+}
+
 export interface PaginationResponse<T> {
-  items: T[]
-  total: number
-  page: number
-  pageSize: number
-  totalPages: number
+	data: T[]
+	pagination: PaginationInfo
 }
 
 export interface SelectOption {
