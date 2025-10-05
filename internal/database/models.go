@@ -109,5 +109,5 @@ type ModelMapping struct {
 	UserFriendlyName string `gorm:"uniqueIndex;not null"` // e.g., "fast-model"
 	ProviderModelName string `gorm:"not null"`           // e.g., "gpt-3.5-turbo"
 	ProviderID        uint   `gorm:"not null"`           // Foreign key to Provider
-	Provider          Provider
+	Provider          Provider `gorm:"foreignKey:ProviderID"`
 }

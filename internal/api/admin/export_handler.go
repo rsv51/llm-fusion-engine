@@ -148,7 +148,7 @@ func (h *ExportHandler) exportToExcel(c *gin.Context) {
 	h.db.Find(&groups)
 	h.db.Find(&providers)
 	h.db.Find(&apiKeys)
-	h.db.Find(&modelMappings)
+	h.db.Preload("Provider").Find(&modelMappings)
 
 	// Create sheets with actual data
 	h.createProvidersSheetWithData(f, providers)
@@ -296,11 +296,11 @@ func (h *ExportHandler) createAssociationsSheetWithData(f *excelize.File, modelM
 	f.SetActiveSheet(idx)
 	
 	// Set headers
-	headers := []string{"ID", "UserFriendlyName", "ProviderModelName", "ProviderID", "ProviderName", "ProviderType"}
+	headers := []string{"ID", "UserFriendlyName", "ProviderModelName", "ProviderID", "ProviderName"}
 	for i, header := range headers {
 		f.SetCellValue("Associations", fmt.Sprintf("%c1", 'A'+i), header)
 	}
-	
+
 	// Add actual data with provider info
 	for i, mapping := range modelMappings {
 		row := i + 2
@@ -309,6 +309,5 @@ func (h *ExportHandler) createAssociationsSheetWithData(f *excelize.File, modelM
 		f.SetCellValue("Associations", fmt.Sprintf("C%d", row), mapping.ProviderModelName)
 		f.SetCellValue("Associations", fmt.Sprintf("D%d", row), mapping.ProviderID)
 		f.SetCellValue("Associations", fmt.Sprintf("E%d", row), mapping.Provider.ProviderType)
-		f.SetCellValue("Associations", fmt.Sprintf("F%d", row), mapping.ProviderType)
 	}
 }

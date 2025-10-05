@@ -196,15 +196,24 @@ func (h *ImportHandler) processExcelImport(f *excelize.File) gin.H {
 
 	// Process each sheet in order: Providers -> Models -> Associations
 	sheetMap := f.GetSheetMap()
-	if _, ok := sheetMap["Providers"]; ok {
+	sheetExists := func(name string) bool {
+		for _, sheetName := range sheetMap {
+			if sheetName == name {
+				return true
+			}
+		}
+		return false
+	}
+
+	if sheetExists("Providers") {
 		h.processProvidersSheet(f, "Providers", result)
 	}
-	
-	if _, ok := sheetMap["Models"]; ok {
+
+	if sheetExists("Models") {
 		h.processModelsSheet(f, "Models", result)
 	}
-	
-	if _, ok := sheetMap["Associations"]; ok {
+
+	if sheetExists("Associations") {
 		h.processAssociationsSheet(f, "Associations", result)
 	}
 
@@ -267,11 +276,8 @@ func (h *ImportHandler) processProvidersSheet(f *excelize.File, sheetName string
 		}
 
 		// Parse integer values
-		priority := 100
 		if priorityIdx != -1 && len(row) > priorityIdx && row[priorityIdx] != "" {
-			if val, err := strconv.Atoi(row[priorityIdx]); err == nil {
-				priority = val
-			}
+			// priority is not used
 		}
 
 		weight := 100
@@ -283,8 +289,8 @@ func (h *ImportHandler) processProvidersSheet(f *excelize.File, sheetName string
 
 		provider := database.Provider{
 			ProviderType: row[nameIdx],
-			Weight:      uint(weight),
-			Enabled:     enabled,
+			Weight:       uint(weight),
+			Enabled:      enabled,
 		}
 
 		if baseURLIdx != -1 && len(row) > baseURLIdx && row[baseURLIdx] != "" {
@@ -336,25 +342,19 @@ func (h *ImportHandler) processModelsSheet(f *excelize.File, sheetName string, r
 		}
 
 		// Parse integer values
-		maxRetry := 3
 		if maxRetryIdx != -1 && len(row) > maxRetryIdx && row[maxRetryIdx] != "" {
-			if val, err := strconv.Atoi(row[maxRetryIdx]); err == nil {
-				maxRetry = val
-			}
+			// maxRetry is not used
 		}
 
-		timeout := 30
 		if timeoutIdx != -1 && len(row) > timeoutIdx && row[timeoutIdx] != "" {
-			if val, err := strconv.Atoi(row[timeoutIdx]); err == nil {
-				timeout = val
-			}
+			// timeout is not used
 		}
 
 		// Create model mapping (since we don't have separate models table in current schema)
 		mapping := database.ModelMapping{
 			UserFriendlyName:  row[nameIdx],
 			ProviderModelName: row[nameIdx], // Use same name for provider model
-			ProviderID:        1, // Default provider ID, should be configurable
+			ProviderID:        1,              // Default provider ID, should be configurable
 		}
 
 		if remarkIdx != -1 && len(row) > remarkIdx && row[remarkIdx] != "" {
@@ -414,27 +414,21 @@ func (h *ImportHandler) processAssociationsSheet(f *excelize.File, sheetName str
 		}
 
 		// Parse boolean values
-		supportsTools := false
 		if supportsToolsIdx != -1 && len(row) > supportsToolsIdx {
-			supportsTools = parseBool(row[supportsToolsIdx])
+			// supportsTools is not used
 		}
 
-		supportsVision := false
 		if supportsVisionIdx != -1 && len(row) > supportsVisionIdx {
-			supportsVision = parseBool(row[supportsVisionIdx])
+			// supportsVision is not used
 		}
 
-		enabled := true
 		if enabledIdx != -1 && len(row) > enabledIdx {
-			enabled = parseBool(row[enabledIdx])
+			// enabled is not used
 		}
 
 		// Parse weight
-		weight := 100
 		if weightIdx != -1 && len(row) > weightIdx && row[weightIdx] != "" {
-			if val, err := strconv.Atoi(row[weightIdx]); err == nil {
-				weight = val
-			}
+			// weight is not used
 		}
 
 		// Find provider by type
