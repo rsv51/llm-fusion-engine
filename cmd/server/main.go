@@ -57,7 +57,21 @@ func main() {
 			c.Abort()
 			return
 		}
-		// In a real app, you'd validate the token here.
+		
+		// Remove Bearer prefix if present
+		if len(token) > 7 && token[:7] == "Bearer " {
+			token = token[7:]
+		}
+		
+		// Simple token validation - in production, use proper JWT validation
+		if token == "" {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid token"})
+			c.Abort()
+			return
+		}
+		
+		// Store token in context for later use
+		c.Set("token", token)
 		c.Next()
 	}
 	
@@ -113,9 +127,11 @@ func main() {
 		
 		// Export
 		adminGroup.GET("/export/all", exportHandler.ExportAll)
+		adminGroup.GET("/export/template", exportHandler.ExportTemplate)
 
 		// Import
 		adminGroup.POST("/import/all", importHandler.ImportAll)
+		adminGroup.POST("/import/excel", importHandler.ImportFromExcel)
 
 		// Providers
 		adminGroup.POST("/providers", providerHandler.CreateProvider)

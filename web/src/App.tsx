@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { Sidebar, Header } from './components/layout'
 import { Dashboard, Groups, Keys, Logs, Models, Settings, Providers, LoginPage } from './pages'
 import { ModelMappings } from './pages/ModelMappings'
+import { ImportExport } from './pages/ImportExport'
 
 import PrivateRoute from './components/auth/PrivateRoute';
 
@@ -40,6 +41,7 @@ export const App: React.FC = () => {
                   <Route path="/settings" element={<Settings />} />
                   <Route path="/providers" element={<Providers />} />
                   <Route path="/model-mappings" element={<ModelMappings />} />
+                  <Route path="/import-export" element={<ImportExport />} />
                   <Route path="/" element={<Navigate to="/dashboard" replace />} />
                   <Route path="*" element={<Navigate to="/dashboard" replace />} />
                 </Routes>
