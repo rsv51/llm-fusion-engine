@@ -286,6 +286,12 @@ const KeyModal: React.FC<KeyModalProps> = ({ isOpen, onClose, onSuccess, groups 
     enabled: true
   })
 
+  const generateRandomKey = () => {
+    const prefix = 'fk-';
+    const randomPart = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+    setFormData({ ...formData, key: prefix + randomPart });
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
@@ -328,12 +334,18 @@ const KeyModal: React.FC<KeyModalProps> = ({ isOpen, onClose, onSuccess, groups 
           <label className="block text-sm font-medium text-gray-700 mb-2">
             密钥值 <span className="text-red-500">*</span>
           </label>
-          <Input
-            value={formData.key}
-            onChange={(e) => setFormData({ ...formData, key: e.target.value })}
-            placeholder="sk-..."
-            required
-          />
+          <div className="flex gap-2">
+            <Input
+              value={formData.key}
+              onChange={(e) => setFormData({ ...formData, key: e.target.value })}
+              placeholder="sk-..."
+              required
+              className="flex-1"
+            />
+            <Button type="button" variant="secondary" onClick={generateRandomKey}>
+              随机生成
+            </Button>
+          </div>
         </div>
 
         <div>

@@ -56,32 +56,24 @@ export const Dashboard: React.FC = () => {
     {
       title: '总请求数',
       value: stats?.totalRequests || 0,
-      change: '+12.5%',
-      trend: 'up' as const,
       icon: Activity,
       color: 'blue'
     },
     {
       title: '活跃密钥',
       value: stats?.activeKeys || 0,
-      change: '+3',
-      trend: 'up' as const,
       icon: Key,
       color: 'green'
     },
     {
       title: '平均响应时间',
-      value: `${stats?.avgResponseTimeMs || 0}ms`,
-      change: '-8.2%',
-      trend: 'down' as const,
+      value: `${stats?.avgResponseTimeMs?.toFixed(0) || 0}ms`,
       icon: Zap,
       color: 'purple'
     },
     {
       title: '成功率',
       value: `${stats?.successRate?.toFixed(1) || 0}%`,
-      change: '+2.1%',
-      trend: 'up' as const,
       icon: AlertCircle,
       color: 'green'
     }
@@ -105,14 +97,6 @@ export const Dashboard: React.FC = () => {
                 <div className="flex-1">
                   <p className="text-sm text-gray-500">{card.title}</p>
                   <p className="text-2xl font-bold text-gray-900 mt-2">{card.value}</p>
-                  <div className="flex items-center gap-1 mt-2">
-                    {card.trend === 'up' ? (
-                      <TrendingUp className="w-4 h-4 text-green-500" />
-                    ) : (
-                      <TrendingDown className="w-4 h-4 text-green-500" />
-                    )}
-                    <span className="text-xs text-green-500">{card.change}</span>
-                  </div>
                 </div>
                 <div className={`w-12 h-12 rounded-full bg-${card.color}-100 flex items-center justify-center`}>
                   <Icon className={`w-6 h-6 text-${card.color}-600`} />

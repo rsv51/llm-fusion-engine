@@ -35,32 +35,46 @@ func (r *ProviderRouter) RouteRequestAsync(model, proxyKey string, excludedGroup
 		return nil, errors.New("invalid proxy key")
 	}
 
-	// 2. Find candidate groups that support the model
+	// 2. Try to resolve the model using the new ModelMapping table
+	var mapping database.ModelMapping
+	err = r.db.Where("user_friendly_name = ?", model).Preload("Provider").First(&mapping).Error
+	if err == nil {
+		// Mapping found, route directly to the specified provider
+		provider := &mapping.Provider
+		apiKey, keyErr := r.keyManager.GetNextKeyAsync(provider.ID)
+		if keyErr != nil {
+			return nil, errors.New("no available API key for the mapped provider")
+		}
+		return &core.ProviderRouteResult{
+			Group:         nil, // No group context when using direct mapping
+			Provider:      provider,
+			ApiKey:        apiKey,
+			ResolvedModel: mapping.ProviderModelName,
+		}, nil
+	}
+
+	// 3. If no mapping is found, fall back to the group-based routing
 	candidateGroups, err := r.findCandidateGroups(model, validatedProxyKey, excludedGroups)
 	if err != nil || len(candidateGroups) == 0 {
 		return nil, errors.New("no available provider group found for the given model")
 	}
 
-	// 3. Select a group based on the load balancing policy
+	// 4. Select a group based on the load balancing policy
 	selectedGroup, err := r.selectGroup(candidateGroups, validatedProxyKey)
 	if err != nil {
 		return nil, err
 	}
 
-	// 4. Get the next available API key for the selected group
+	// 5. Get the next available API key for the selected group
 	apiKey, err := r.keyManager.GetNextKeyAsync(selectedGroup.ID)
 	if err != nil {
-		// This could be a point for failover logic in the future
 		return nil, errors.New("no available API key in the selected group")
 	}
-
-	// 5. Resolve model alias
-	resolvedModel := r.resolveModelAlias(model, selectedGroup.ModelAliases)
 
 	return &core.ProviderRouteResult{
 		Group:         selectedGroup,
 		ApiKey:        apiKey,
-		ResolvedModel: resolvedModel,
+		ResolvedModel: model, // No alias resolution needed here anymore
 	}, nil
 }
 
@@ -102,7 +116,7 @@ func (r *ProviderRouter) findCandidateGroups(model string, proxyKey *database.Pr
 			}
 		}
 
-		if isSupported || r.resolveModelAlias(model, group.ModelAliases) != model {
+		if isSupported {
 			candidateGroups = append(candidateGroups, group)
 		}
 	}
@@ -149,24 +163,6 @@ func (r *ProviderRouter) selectByWeightedRandom(groups []*database.Group, proxyK
 	// TODO: Implement weighted random selection based on provider weights within the group
 	// and group weights in the proxy key.
 	return r.selectByFailover(groups) // Fallback to failover for now
-}
-
-// resolveModelAlias checks if the model has an alias in the group's config.
-func (r *ProviderRouter) resolveModelAlias(model, modelAliasesJSON string) string {
-	if modelAliasesJSON == "" {
-		return model
-	}
-
-	var aliases map[string]string
-	if err := json.Unmarshal([]byte(modelAliasesJSON), &aliases); err != nil {
-		return model // Return original model if JSON is invalid
-	}
-
-	if alias, ok := aliases[model]; ok {
-		return alias
-	}
-
-	return model
 }
 
 func init() {

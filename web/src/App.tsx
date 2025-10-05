@@ -1,7 +1,7 @@
 import React, { useState } from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { Sidebar, Header } from './components/layout'
-import { Dashboard, Groups, Keys, Logs, Models, Settings, Providers, LoginPage } from './pages'
+import { Dashboard, Groups, Keys, Logs, Models, Settings, Providers, LoginPage, ModelMappings } from './pages'
 
 import PrivateRoute from './components/auth/PrivateRoute';
 
@@ -38,6 +38,7 @@ export const App: React.FC = () => {
                   <Route path="/logs" element={<Logs />} />
                   <Route path="/settings" element={<Settings />} />
                   <Route path="/providers" element={<Providers />} />
+                  <Route path="/model-mappings" element={<ModelMappings />} />
                   <Route path="/" element={<Navigate to="/dashboard" replace />} />
                   <Route path="*" element={<Navigate to="/dashboard" replace />} />
                 </Routes>

@@ -8,6 +8,7 @@ import (
 // ProviderRouteResult defines the result of a routing decision.
 type ProviderRouteResult struct {
 	Group         *database.Group
+	Provider      *database.Provider
 	ApiKey        string
 	ResolvedModel string
 }

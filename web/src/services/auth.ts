@@ -1,5 +1,5 @@
 import api from './api';
-import { LoginRequest, LoginResponse } from '../types';
+import { LoginRequest, LoginResponse, UpdateProfileRequest } from '../types';
 
 export const authApi = {
   async login(credentials: LoginRequest): Promise<LoginResponse> {
@@ -20,6 +20,10 @@ export const authApi = {
 
   isAuthenticated(): boolean {
     return !!this.getToken();
+  },
+
+  async updateProfile(data: UpdateProfileRequest): Promise<void> {
+    return api.put('/admin/account/profile', data);
   },
 };
 

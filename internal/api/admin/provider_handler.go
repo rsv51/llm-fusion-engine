@@ -3,6 +3,7 @@ package admin
 import (
 	"llm-fusion-engine/internal/database"
 	"net/http"
+	"strconv"
 
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
@@ -34,14 +35,44 @@ func (h *ProviderHandler) CreateProvider(c *gin.Context) {
 	c.JSON(http.StatusOK, provider)
 }
 
-// GetProviders retrieves all providers.
+// GetProviders retrieves all providers with pagination.
 func (h *ProviderHandler) GetProviders(c *gin.Context) {
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	pageSize, _ := strconv.Atoi(c.DefaultQuery("pageSize", "20"))
+
+	if page < 1 {
+		page = 1
+	}
+	if pageSize < 1 || pageSize > 100 {
+		pageSize = 20
+	}
+
+	offset := (page - 1) * pageSize
+
 	var providers []database.Provider
-	if err := h.db.Find(&providers).Error; err != nil {
+	var total int64
+
+	// Count total records
+	if err := h.db.Model(&database.Provider{}).Count(&total).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to count providers"})
+		return
+	}
+
+	// Get paginated records
+	if err := h.db.Offset(offset).Limit(pageSize).Find(&providers).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve providers"})
 		return
 	}
-	c.JSON(http.StatusOK, providers)
+
+	c.JSON(http.StatusOK, gin.H{
+		"data": providers,
+		"pagination": gin.H{
+			"page":      page,
+			"pageSize":  pageSize,
+			"total":     total,
+			"totalPage": (total + int64(pageSize) - 1) / int64(pageSize),
+		},
+	})
 }
 
 // GetProvider retrieves a single provider by ID.

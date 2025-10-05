@@ -7,7 +7,8 @@ import {
   Box,
   FileText,
   Settings,
-  X
+  X,
+  GitMerge
 } from 'lucide-react'
 
 interface SidebarProps {
@@ -21,6 +22,7 @@ const navigation = [
   { name: '密钥管理', href: '/keys', icon: Key },
   { name: '供应商管理', href: '/providers', icon: Users },
   { name: '模型配置', href: '/models', icon: Box },
+  { name: '模型映射', href: '/model-mappings', icon: GitMerge },
   { name: '请求日志', href: '/logs', icon: FileText },
   { name: '系统设置', href: '/settings', icon: Settings },
 ]

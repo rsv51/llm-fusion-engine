@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { Plus, Edit2, Trash2, Search, Zap } from 'lucide-react'
 import { Card, Button, Input, Modal, Badge } from '../components/ui'
 import { api } from '../services'
-import type { Provider } from '../types'
+import type { Provider, PaginationResponse } from '../types'
 
 export const Providers: React.FC = () => {
   const [providers, setProviders] = useState<Provider[]>([])
@@ -18,8 +18,8 @@ export const Providers: React.FC = () => {
   const loadProviders = async () => {
     try {
       setLoading(true)
-      const response = await api.get<Provider[]>('/admin/providers')
-      setProviders(response.data)
+      const response = await api.get<PaginationResponse<Provider>>('/admin/providers')
+      setProviders(response.data.data)
     } catch (error) {
       console.error('加载供应商失败:', error)
     } finally {
@@ -107,60 +107,68 @@ export const Providers: React.FC = () => {
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {filteredProviders.map((provider) => (
-            <Card key={provider.id} className="p-6 hover:shadow-lg transition-shadow">
-              <div className="space-y-4">
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <h3 className="text-lg font-semibold text-gray-900">{provider.providerType}</h3>
-                    <p className="text-sm text-gray-500 mt-1">ID: {provider.id}</p>
-                  </div>
-                  <Badge variant={provider.enabled ? 'success' : 'default'}>
-                    {provider.enabled ? '已启用' : '已禁用'}
-                  </Badge>
-                </div>
+        <>
+          {filteredProviders && filteredProviders.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {filteredProviders.map((provider) => (
+                <Card key={provider.id} className="p-6 hover:shadow-lg transition-shadow">
+                  <div className="space-y-4">
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <h3 className="text-lg font-semibold text-gray-900">{provider.providerType}</h3>
+                        <p className="text-sm text-gray-500 mt-1">ID: {provider.id}</p>
+                      </div>
+                      <Badge variant={provider.enabled ? 'success' : 'default'}>
+                        {provider.enabled ? '已启用' : '已禁用'}
+                      </Badge>
+                    </div>
 
-                <div className="grid grid-cols-2 gap-4 pt-4 border-t border-gray-100">
-                  <div>
-                    <p className="text-xs text-gray-500">权重</p>
-                    <p className="text-lg font-semibold text-gray-900">{provider.weight}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-gray-500">分组ID</p>
-                    <p className="text-lg font-semibold text-gray-900">{provider.groupId}</p>
-                  </div>
-                </div>
+                    <div className="grid grid-cols-2 gap-4 pt-4 border-t border-gray-100">
+                      <div>
+                        <p className="text-xs text-gray-500">权重</p>
+                        <p className="text-lg font-semibold text-gray-900">{provider.weight}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-gray-500">分组ID</p>
+                        <p className="text-lg font-semibold text-gray-900">{provider.groupId}</p>
+                      </div>
+                    </div>
 
-                <div className="flex gap-2 pt-2">
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    onClick={() => handleCheckHealth(provider.id)}
-                    className="flex-1"
-                  >
-                    <Zap className="w-4 h-4 mr-1" />
-                    检查
-                  </Button>
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    onClick={() => handleEdit(provider)}
-                  >
-                    <Edit2 className="w-4 h-4" />
-                  </Button>
-                  <Button
-                    variant="danger"
-                    size="sm"
-                    onClick={() => handleDelete(provider.id)}
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </Button>
-                </div>
-              </div>
-            </Card>
-          ))}
-        </div>
+                    <div className="flex gap-2 pt-2">
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        onClick={() => handleCheckHealth(provider.id)}
+                        className="flex-1"
+                      >
+                        <Zap className="w-4 h-4 mr-1" />
+                        检查
+                      </Button>
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        onClick={() => handleEdit(provider)}
+                      >
+                        <Edit2 className="w-4 h-4" />
+                      </Button>
+                      <Button
+                        variant="danger"
+                        size="sm"
+                        onClick={() => handleDelete(provider.id)}
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  </div>
+                </Card>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-12">
+              <p className="text-gray-500">暂无供应商，请点击右上角“新建供应商”按钮添加。</p>
+            </div>
+          )}
+        </>
       )}
 
       <ProviderModal

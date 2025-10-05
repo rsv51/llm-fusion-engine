@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
 import { Card, Button } from '../components/ui'
-import { Save, RefreshCw, Database, Shield, Bell, Globe, Upload, Download } from 'lucide-react'
+import { Save, RefreshCw, Database, Shield, Bell, Globe, Upload, Download, User } from 'lucide-react'
+import { authApi } from '../services'
 
 export const Settings: React.FC = () => {
   const [saving, setSaving] = useState(false)
@@ -8,13 +9,29 @@ export const Settings: React.FC = () => {
   const [importing, setImporting] = useState(false)
   const [importFile, setImportFile] = useState<File | null>(null)
   const [importType, setImportType] = useState('groups')
+  const [username, setUsername] = useState('admin')
+  const [currentPassword, setCurrentPassword] = useState('')
+  const [newPassword, setNewPassword] = useState('')
 
   const handleSave = async () => {
-    setSaving(true)
-    // 模拟保存操作
-    await new Promise(resolve => setTimeout(resolve, 1000))
-    setSaving(false)
-  }
+    setSaving(true);
+    try {
+      await authApi.updateProfile({
+        username,
+        password: currentPassword,
+        newPassword: newPassword,
+      });
+      alert('设置已保存');
+      // 清空密码字段
+      setCurrentPassword('');
+      setNewPassword('');
+    } catch (error) {
+      console.error('保存设置失败:', error);
+      alert(`保存失败: ${error instanceof Error ? error.message : '未知错误'}`);
+    } finally {
+      setSaving(false);
+    }
+  };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
@@ -55,36 +72,51 @@ export const Settings: React.FC = () => {
     }
   }
 
-  const handleExport = (dataType: string, format: 'csv' | 'xlsx') => {
+  const handleExport = (dataType: string, format: 'json' | 'yaml') => {
     window.location.href = `/api/admin/export/${dataType}?format=${format}`
   }
 
   const renderGeneralSettings = () => (
-    <>
-      {/* 数据库设置 */}
+    <div className="space-y-6">
+      {/* 账户安全 */}
       <Card>
         <div className="flex items-center gap-3 mb-4">
-          <Database className="w-5 h-5 text-blue-600" />
-          <h2 className="text-lg font-semibold text-gray-900">数据库设置</h2>
+          <User className="w-5 h-5 text-blue-600" />
+          <h2 className="text-lg font-semibold text-gray-900">账户安全</h2>
         </div>
         <div className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              数据库类型
-            </label>
-            <select className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
-              <option value="sqlite">SQLite</option>
-              <option value="postgres">PostgreSQL</option>
-              <option value="mysql">MySQL</option>
-            </select>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              连接字符串
+              用户名
             </label>
             <input
               type="text"
-              defaultValue="fusion.db"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              当前密码
+            </label>
+            <input
+              type="password"
+              placeholder="如需修改密码，请输入当前密码"
+              value={currentPassword}
+              onChange={(e) => setCurrentPassword(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              新密码
+            </label>
+            <input
+              type="password"
+              placeholder="输入新密码"
+              value={newPassword}
+              onChange={(e) => setNewPassword(e.target.value)}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
@@ -130,7 +162,7 @@ export const Settings: React.FC = () => {
           </div>
         </div>
       </Card>
-    </>
+    </div>
   )
 
   const renderImportExport = () => (
@@ -144,22 +176,12 @@ export const Settings: React.FC = () => {
         <div className="space-y-4">
           <div className="flex items-center justify-between p-4 border rounded-lg">
             <div>
-              <p className="font-medium text-gray-900">导出分组数据</p>
-              <p className="text-sm text-gray-500">将所有分组配置导出为 CSV 或 XLSX 文件</p>
+              <p className="font-medium text-gray-900">导出所有配置</p>
+              <p className="text-sm text-gray-500">将所有系统配置（包括组、提供商、密钥和模型映射）导出为一个文件。</p>
             </div>
             <div className="flex gap-2">
-              <Button variant="secondary" onClick={() => handleExport('groups', 'csv')}>CSV</Button>
-              <Button variant="secondary" onClick={() => handleExport('groups', 'xlsx')}>XLSX</Button>
-            </div>
-          </div>
-          <div className="flex items-center justify-between p-4 border rounded-lg">
-            <div>
-              <p className="font-medium text-gray-900">导出密钥数据</p>
-              <p className="text-sm text-gray-500">将所有密钥信息导出为 CSV 或 XLSX 文件</p>
-            </div>
-            <div className="flex gap-2">
-              <Button variant="secondary" onClick={() => handleExport('keys', 'csv')}>CSV</Button>
-              <Button variant="secondary" onClick={() => handleExport('keys', 'xlsx')}>XLSX</Button>
+              <Button variant="secondary" onClick={() => handleExport('all', 'json')}>JSON</Button>
+              <Button variant="secondary" onClick={() => handleExport('all', 'yaml')}>YAML</Button>
             </div>
           </div>
         </div>
@@ -174,27 +196,13 @@ export const Settings: React.FC = () => {
         <div className="p-4 border rounded-lg space-y-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              选择导入类型
-            </label>
-            <select
-              value={importType}
-              onChange={(e) => setImportType(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="groups">分组</option>
-              <option value="keys">密钥</option>
-              <option value="providers">供应商</option>
-            </select>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              选择文件 (.csv, .xlsx)
+              选择配置文件 (.json, .yaml)
             </label>
             <div className="flex items-center gap-4">
               <input
                 type="file"
                 onChange={handleFileChange}
-                accept=".csv, .xlsx"
+                accept=".json, .yaml, .yml"
                 className="flex-1 text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
               />
               <Button onClick={handleImport} disabled={!importFile || importing}>

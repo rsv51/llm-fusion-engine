@@ -27,6 +27,13 @@ type LoginRequest struct {
 	Password string `json:"password" binding:"required"`
 }
 
+// UpdateProfileRequest represents the update profile request payload.
+type UpdateProfileRequest struct {
+	Username    string `json:"username"`
+	Password    string `json:"password"`
+	NewPassword string `json:"newPassword"`
+}
+
 // LoginResponse represents the login response.
 type LoginResponse struct {
 	Token string      `json:"token"`
@@ -97,4 +104,49 @@ func (h *AuthHandler) GetProfile(c *gin.Context) {
 		Username: "admin",
 		IsAdmin:  true,
 	})
+}
+
+// UpdateProfile handles updating the user's profile.
+func (h *AuthHandler) UpdateProfile(c *gin.Context) {
+	// In a real app, you'd get the user ID from the token.
+	// For now, we'll assume we're updating the admin user (ID 1).
+	userID := uint(1)
+
+	var req UpdateProfileRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	var user database.User
+	if err := h.db.First(&user, userID).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
+		return
+	}
+
+	// Verify current password if a new password is being set
+	if req.NewPassword != "" {
+		if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(req.Password)); err != nil {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid current password"})
+			return
+		}
+		hashedPassword, err := bcrypt.GenerateFromPassword([]byte(req.NewPassword), bcrypt.DefaultCost)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to hash new password"})
+			return
+		}
+		user.Password = string(hashedPassword)
+	}
+
+	// Update username if provided
+	if req.Username != "" {
+		user.Username = req.Username
+	}
+
+	if err := h.db.Save(&user).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update profile"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Profile updated successfully"})
 }

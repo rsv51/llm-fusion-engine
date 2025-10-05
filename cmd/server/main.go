@@ -40,10 +40,23 @@ func main() {
 	importHandler := admin.NewImportHandler(db)
 	providerHandler := admin.NewProviderHandler(db)
 	modelHandler := admin.NewModelHandler(db)
+	modelMappingHandler := admin.NewModelMappingHandler(db)
 	healthHandler := admin.NewHealthHandler(db, healthChecker)
 
 	// 4. Setup Router
 	router := gin.Default()
+
+	// Simple auth middleware
+	authMiddleware := func(c *gin.Context) {
+		token := c.GetHeader("Authorization")
+		if token == "" {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Authorization token required"})
+			c.Abort()
+			return
+		}
+		// In a real app, you'd validate the token here.
+		c.Next()
+	}
 	
 	// Serve static files from web/dist
 	router.Static("/assets", "./web/dist/assets")
@@ -64,6 +77,7 @@ func main() {
 
 	// Admin API for management
 	adminGroup := router.Group("/api/admin")
+	adminGroup.Use(authMiddleware) // Protect all admin routes
 	{
 		// Statistics
 		adminGroup.GET("/stats", statsHandler.GetStats)
@@ -74,9 +88,14 @@ func main() {
 		adminGroup.GET("/groups/:id", groupHandler.GetGroup)
 		adminGroup.PUT("/groups/:id", groupHandler.UpdateGroup)
 		adminGroup.DELETE("/groups/:id", groupHandler.DeleteGroup)
-		adminGroup.GET("/groups/:id/model-aliases", groupHandler.GetModelAliases)
-		adminGroup.PUT("/groups/:id/model-aliases", groupHandler.UpdateModelAliases)
 		
+		// Model Mappings
+		adminGroup.POST("/model-mappings", modelMappingHandler.CreateModelMapping)
+		adminGroup.GET("/model-mappings", modelMappingHandler.GetModelMappings)
+		adminGroup.GET("/model-mappings/:id", modelMappingHandler.GetModelMapping)
+		adminGroup.PUT("/model-mappings/:id", modelMappingHandler.UpdateModelMapping)
+		adminGroup.DELETE("/model-mappings/:id", modelMappingHandler.DeleteModelMapping)
+
 		// Keys
 		adminGroup.POST("/keys", keyHandler.CreateKey)
 		adminGroup.GET("/keys", keyHandler.GetKeys)
@@ -90,14 +109,10 @@ func main() {
 		adminGroup.DELETE("/logs", logHandler.DeleteLogs)
 		
 		// Export
-		adminGroup.GET("/export/groups", exportHandler.ExportGroups)
-		adminGroup.GET("/export/keys", exportHandler.ExportKeys)
-		adminGroup.GET("/export/providers", exportHandler.ExportProviders)
+		adminGroup.GET("/export/all", exportHandler.ExportAll)
 
 		// Import
-		adminGroup.POST("/import/groups", importHandler.ImportGroups)
-		adminGroup.POST("/import/keys", importHandler.ImportKeys)
-		adminGroup.POST("/import/providers", importHandler.ImportProviders)
+		adminGroup.POST("/import/all", importHandler.ImportAll)
 
 		// Providers
 		adminGroup.POST("/providers", providerHandler.CreateProvider)
@@ -117,6 +132,9 @@ func main() {
 		// Health Checks
 		adminGroup.POST("/health/providers/:id", healthHandler.CheckProviderHealth)
 		adminGroup.POST("/health/providers", healthHandler.CheckAllProvidersHealth)
+
+		// User account management
+		adminGroup.PUT("/account/profile", authHandler.UpdateProfile)
 	}
 	
 	// NoRoute handler for SPA routing

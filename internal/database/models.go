@@ -102,3 +102,12 @@ type Model struct {
 	Description  string
 	Enabled      bool `gorm:"default:true"`
 }
+
+// ModelMapping allows aliasing model names to specific provider models.
+type ModelMapping struct {
+	BaseModel
+	UserFriendlyName string `gorm:"uniqueIndex;not null"` // e.g., "fast-model"
+	ProviderModelName string `gorm:"not null"`           // e.g., "gpt-3.5-turbo"
+	ProviderID        uint   `gorm:"not null"`           // Foreign key to Provider
+	Provider          Provider
+}
