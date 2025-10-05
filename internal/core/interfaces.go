@@ -1,6 +1,9 @@
 package core
 
-import "llm-fusion-engine/internal/database"
+import (
+	"llm-fusion-engine/internal/database"
+	"net/http"
+)
 
 // ProviderRouteResult defines the result of a routing decision.
 type ProviderRouteResult struct {
@@ -27,8 +30,6 @@ type IKeyManager interface {
 type IProvider interface {
 	// TODO: Define methods for making chat completion requests.
 }
-
-import "net/http"
 
 // IProviderFactory creates instances of IProvider.
 type IProviderFactory interface {
