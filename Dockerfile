@@ -2,7 +2,8 @@
 FROM node:18-alpine AS frontend-builder
 WORKDIR /app/web
 COPY web/package*.json ./
-RUN npm ci --only=production=false
+# 安装所有依赖(包括 devDependencies)
+RUN npm install
 COPY web/ .
 # 使用 npx 确保可以找到并执行 tsc 和 vite
 RUN npx tsc && npx vite build
