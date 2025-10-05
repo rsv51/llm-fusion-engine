@@ -13,7 +13,8 @@ export interface Group {
   proxyUrl?: string
   createdAt: string
   updatedAt: string
-}
+  modelAliases?: Record<string, string>
+ }
 
 export interface CreateGroupRequest {
   name: string

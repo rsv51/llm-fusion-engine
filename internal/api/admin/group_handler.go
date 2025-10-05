@@ -1,6 +1,7 @@
 package admin
 
 import (
+	"encoding/json"
 	"llm-fusion-engine/internal/database"
 	"net/http"
 
@@ -89,4 +90,56 @@ func (h *GroupHandler) DeleteGroup(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"message": "Group deleted successfully"})
+}
+
+// GetModelAliases retrieves the model aliases for a group.
+func (h *GroupHandler) GetModelAliases(c *gin.Context) {
+	var group database.Group
+	id := c.Param("id")
+	if err := h.db.First(&group, id).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Group not found"})
+		return
+	}
+
+	var aliases map[string]string
+	if group.ModelAliases != "" {
+		if err := json.Unmarshal([]byte(group.ModelAliases), &aliases); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to parse model aliases"})
+			return
+		}
+	}
+
+	c.JSON(http.StatusOK, aliases)
+}
+
+// UpdateModelAliases updates the model aliases for a group.
+func (h *GroupHandler) UpdateModelAliases(c *gin.Context) {
+	var group database.Group
+	id := c.Param("id")
+	if err := h.db.First(&group, id).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Group not found"})
+		return
+	}
+
+	var req struct {
+		Aliases map[string]string `json:"aliases"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	aliasesJSON, err := json.Marshal(req.Aliases)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to serialize model aliases"})
+		return
+	}
+
+	group.ModelAliases = string(aliasesJSON)
+	if err := h.db.Save(&group).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update model aliases"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Model aliases updated successfully"})
 }

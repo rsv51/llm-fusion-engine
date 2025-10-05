@@ -1,80 +1,231 @@
-import React from 'react'
-import { Card } from '../components/ui'
-import { Box, Settings, CheckCircle, XCircle } from 'lucide-react'
+import React, { useState, useEffect } from 'react'
+import { Card, Button, Input, Modal, Badge } from '../components/ui'
+import { Box, Settings, CheckCircle, XCircle, Plus, Edit2, Trash2, Search, Copy } from 'lucide-react'
+import { api } from '../services'
+import type { Model } from '../types'
 
 export const Models: React.FC = () => {
-  // 模拟数据 - 后续可以从 API 获取
-  const models = [
-    { id: '1', name: 'gpt-4', provider: 'OpenAI', status: 'active', requests: 1250 },
-    { id: '2', name: 'gpt-3.5-turbo', provider: 'OpenAI', status: 'active', requests: 5420 },
-    { id: '3', name: 'claude-3-opus', provider: 'Anthropic', status: 'active', requests: 890 },
-    { id: '4', name: 'claude-3-sonnet', provider: 'Anthropic', status: 'inactive', requests: 0 },
-  ]
+  const [models, setModels] = useState<Model[]>([])
+  const [loading, setLoading] = useState(true)
+  const [searchQuery, setSearchQuery] = useState('')
+  const [page, setPage] = useState(1)
+  const [totalPages, setTotalPages] = useState(1)
+  const [isModalOpen, setIsModalOpen] = useState(false)
+  const [editingModel, setEditingModel] = useState<Model | null>(null)
+
+  useEffect(() => {
+    loadModels(1)
+  }, [])
+
+  const loadModels = async (pageNum: number) => {
+    try {
+      setLoading(true)
+      const response = await api.get('/admin/models', {
+        params: { page: pageNum, pageSize: 12, search: searchQuery }
+      }) as any;
+      setModels(response.items)
+      setPage(response.page)
+      setTotalPages(response.totalPages)
+    } catch (error) {
+      console.error('加载模型失败:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleSearch = () => {
+    loadModels(1)
+  }
+
+  const handleCreate = () => {
+    setEditingModel(null)
+    setIsModalOpen(true)
+  }
+
+  const handleEdit = (model: Model) => {
+    setEditingModel(model)
+    setIsModalOpen(true)
+  }
+
+  const handleDelete = async (id: number) => {
+    if (!window.confirm('确定要删除此模型吗?')) return
+    try {
+      await api.delete(`/admin/models/${id}`)
+      await loadModels(page)
+    } catch (error) {
+      console.error('删除模型失败:', error)
+    }
+  }
+
+  const handleClone = async (model: Model) => {
+    try {
+      const newName = `${model.name}-copy`;
+      await api.post(`/admin/models/${model.id}/clone`, { newName })
+      await loadModels(page)
+    } catch (error) {
+      console.error('克隆模型失败:', error)
+    }
+  }
+
+  const handleSubmit = async (formData: Partial<Model>) => {
+    try {
+      if (editingModel) {
+        await api.put(`/admin/models/${editingModel.id}`, formData)
+      } else {
+        await api.post('/admin/models', formData)
+      }
+      setIsModalOpen(false)
+      await loadModels(page)
+    } catch (error) {
+      console.error('保存模型失败:', error)
+    }
+  }
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-gray-900">模型配置</h1>
-        <button className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
-          <Settings className="w-4 h-4" />
-          配置模型
-        </button>
+        <Button onClick={handleCreate}>
+          <Plus className="w-4 h-4 mr-2" />
+          新建模型
+        </Button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {models.map((model) => (
-          <Card key={model.id}>
-            <div className="flex items-start justify-between">
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-                  <Box className="w-6 h-6 text-blue-600" />
-                </div>
-                <div>
-                  <h3 className="font-semibold text-gray-900">{model.name}</h3>
-                  <p className="text-sm text-gray-500">{model.provider}</p>
-                </div>
-              </div>
-              {model.status === 'active' ? (
-                <CheckCircle className="w-5 h-5 text-green-500" />
-              ) : (
-                <XCircle className="w-5 h-5 text-gray-400" />
-              )}
-            </div>
-            <div className="mt-4 pt-4 border-t border-gray-200">
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-gray-600">总请求数</span>
-                <span className="font-medium text-gray-900">{model.requests.toLocaleString()}</span>
-              </div>
-            </div>
-          </Card>
-        ))}
-      </div>
-
-      <Card>
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">模型使用统计</h2>
-        <div className="space-y-3">
-          {models.map((model) => (
-            <div key={model.id} className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <span className="text-sm font-medium text-gray-900">{model.name}</span>
-                <span className="text-sm text-gray-500">({model.provider})</span>
-              </div>
-              <div className="flex items-center gap-4">
-                <div className="w-48 bg-gray-200 rounded-full h-2">
-                  <div 
-                    className="bg-blue-600 h-2 rounded-full" 
-                    style={{ width: `${(model.requests / 5420) * 100}%` }}
-                  />
-                </div>
-                <span className="text-sm font-medium text-gray-900 w-16 text-right">
-                  {model.requests}
-                </span>
-              </div>
-            </div>
-          ))}
+      <Card className="p-4">
+        <div className="flex gap-4">
+          <Input
+            placeholder="搜索模型名称..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="flex-1"
+          />
+          <Button onClick={handleSearch}>
+            <Search className="w-4 h-4 mr-2" />
+            搜索
+          </Button>
         </div>
       </Card>
+
+      {loading ? (
+        <div className="text-center py-12">加载中...</div>
+      ) : (
+        <>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {models.map((model) => (
+              <Card key={model.id} className="p-4">
+                <div className="flex items-start justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                      <Box className="w-5 h-5 text-blue-600" />
+                    </div>
+                    <div>
+                      <h3 className="font-semibold text-gray-900">{model.name}</h3>
+                      <p className="text-sm text-gray-500">{model.provider}</p>
+                    </div>
+                  </div>
+                  <Badge variant={model.enabled ? 'success' : 'default'}>
+                    {model.enabled ? '启用' : '禁用'}
+                  </Badge>
+                </div>
+                <div className="mt-4 pt-4 border-t border-gray-100 flex justify-end gap-2">
+                  <Button variant="secondary" size="sm" onClick={() => handleClone(model)}>
+                    <Copy className="w-4 h-4" />
+                  </Button>
+                  <Button variant="secondary" size="sm" onClick={() => handleEdit(model)}>
+                    <Edit2 className="w-4 h-4" />
+                  </Button>
+                  <Button variant="danger" size="sm" onClick={() => handleDelete(model.id)}>
+                    <Trash2 className="w-4 h-4" />
+                  </Button>
+                </div>
+              </Card>
+            ))}
+          </div>
+          <div className="flex justify-center items-center gap-4">
+            <Button onClick={() => loadModels(page - 1)} disabled={page <= 1}>
+              上一页
+            </Button>
+            <span>第 {page} / {totalPages} 页</span>
+            <Button onClick={() => loadModels(page + 1)} disabled={page >= totalPages}>
+              下一页
+            </Button>
+          </div>
+        </>
+      )}
+
+      <ModelModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        onSubmit={handleSubmit}
+        model={editingModel}
+      />
     </div>
+  )
+}
+
+interface ModelModalProps {
+  isOpen: boolean
+  onClose: () => void
+  onSubmit: (data: Partial<Model>) => void
+  model: Model | null
+}
+
+const ModelModal: React.FC<ModelModalProps> = ({ isOpen, onClose, onSubmit, model }) => {
+  const [formData, setFormData] = useState<Partial<Model>>({})
+
+  useEffect(() => {
+    if (model) {
+      setFormData(model)
+    } else {
+      setFormData({ name: '', provider: '', enabled: true, category: '', maxTokens: 0 })
+    }
+  }, [model])
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    onSubmit(formData)
+  }
+
+  return (
+    <Modal isOpen={isOpen} onClose={onClose} title={model ? '编辑模型' : '新建模型'}>
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <Input
+          label="模型名称"
+          value={formData.name}
+          onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+          required
+        />
+        <Input
+          label="供应商"
+          value={formData.provider}
+          onChange={(e) => setFormData({ ...formData, provider: e.target.value })}
+          required
+        />
+        <Input
+          label="分类"
+          value={formData.category}
+          onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+        />
+        <Input
+          label="最大Token数"
+          type="number"
+          value={formData.maxTokens}
+          onChange={(e) => setFormData({ ...formData, maxTokens: parseInt(e.target.value) })}
+        />
+        <div className="flex items-center gap-2">
+          <input
+            type="checkbox"
+            checked={formData.enabled}
+            onChange={(e) => setFormData({ ...formData, enabled: e.target.checked })}
+          />
+          <label>启用</label>
+        </div>
+        <div className="flex justify-end gap-2">
+          <Button type="button" variant="secondary" onClick={onClose}>取消</Button>
+          <Button type="submit">保存</Button>
+        </div>
+      </form>
+    </Modal>
   )
 }
 

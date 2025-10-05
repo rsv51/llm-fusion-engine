@@ -3,9 +3,12 @@
 export interface Model {
   id: number
   name: string
+  provider: string
+  category?: string
+  maxTokens?: number
+  inputPrice?: number
+  outputPrice?: number
   description?: string
-  maxRetry: number
-  timeout: number
   enabled: boolean
   createdAt: string
   updatedAt: string

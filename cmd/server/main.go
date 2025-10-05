@@ -24,6 +24,7 @@ func main() {
 	// 2. Initialize Services
 	keyManager := services.NewKeyManager(db)
 	providerRouter := services.NewProviderRouter(db, keyManager)
+	healthChecker := services.NewHealthChecker(db)
 	// TODO: Initialize ProviderFactory
 	// providerFactory := services.NewProviderFactory()
 	multiProviderService := services.NewMultiProviderService(providerRouter, nil) // Pass nil for factory for now
@@ -34,6 +35,11 @@ func main() {
 	statsHandler := admin.NewStatsHandler(db)
 	keyHandler := admin.NewKeyHandler(db)
 	logHandler := admin.NewLogHandler(db)
+	exportHandler := admin.NewExportHandler(db)
+	importHandler := admin.NewImportHandler(db)
+	providerHandler := admin.NewProviderHandler(db)
+	modelHandler := admin.NewModelHandler(db)
+	healthHandler := admin.NewHealthHandler(db, healthChecker)
 
 	// 4. Setup Router
 	router := gin.Default()
@@ -61,6 +67,8 @@ func main() {
 		adminGroup.GET("/groups/:id", groupHandler.GetGroup)
 		adminGroup.PUT("/groups/:id", groupHandler.UpdateGroup)
 		adminGroup.DELETE("/groups/:id", groupHandler.DeleteGroup)
+		adminGroup.GET("/groups/:id/model-aliases", groupHandler.GetModelAliases)
+		adminGroup.PUT("/groups/:id/model-aliases", groupHandler.UpdateModelAliases)
 		
 		// Keys
 		adminGroup.POST("/keys", keyHandler.CreateKey)
@@ -73,6 +81,35 @@ func main() {
 		adminGroup.GET("/logs", logHandler.GetLogs)
 		adminGroup.GET("/logs/:id", logHandler.GetLog)
 		adminGroup.DELETE("/logs", logHandler.DeleteLogs)
+		
+		// Export
+		adminGroup.GET("/export/groups", exportHandler.ExportGroups)
+		adminGroup.GET("/export/keys", exportHandler.ExportKeys)
+		adminGroup.GET("/export/providers", exportHandler.ExportProviders)
+
+		// Import
+		adminGroup.POST("/import/groups", importHandler.ImportGroups)
+		adminGroup.POST("/import/keys", importHandler.ImportKeys)
+		adminGroup.POST("/import/providers", importHandler.ImportProviders)
+
+		// Providers
+		adminGroup.POST("/providers", providerHandler.CreateProvider)
+		adminGroup.GET("/providers", providerHandler.GetProviders)
+		adminGroup.GET("/providers/:id", providerHandler.GetProvider)
+		adminGroup.PUT("/providers/:id", providerHandler.UpdateProvider)
+		adminGroup.DELETE("/providers/:id", providerHandler.DeleteProvider)
+
+		// Models
+		adminGroup.POST("/models", modelHandler.CreateModel)
+		adminGroup.GET("/models", modelHandler.GetModels)
+		adminGroup.GET("/models/:id", modelHandler.GetModel)
+		adminGroup.PUT("/models/:id", modelHandler.UpdateModel)
+		adminGroup.DELETE("/models/:id", modelHandler.DeleteModel)
+		adminGroup.POST("/models/:id/clone", modelHandler.CloneModel)
+
+		// Health Checks
+		adminGroup.POST("/health/providers/:id", healthHandler.CheckProviderHealth)
+		adminGroup.POST("/health/providers", healthHandler.CheckAllProvidersHealth)
 	}
 	
 	// NoRoute handler for SPA routing

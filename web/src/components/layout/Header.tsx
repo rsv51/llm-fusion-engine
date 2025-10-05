@@ -1,13 +1,22 @@
 import React from 'react'
 import { Menu, Bell, User, LogOut } from 'lucide-react'
 import { Badge } from '../ui'
+import { useAuth } from '../../hooks/useAuth'
+import { useNavigate } from 'react-router-dom'
 
 interface HeaderProps {
   onMenuClick: () => void
-  onLogout?: () => void
 }
 
-export const Header: React.FC<HeaderProps> = ({ onMenuClick, onLogout }) => {
+export const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
+  const { user, logout } = useAuth();
+  const navigate = useNavigate();
+
+  const handleLogout = () => {
+    logout();
+    navigate('/login');
+  };
+
   return (
     <header className="sticky top-0 z-30 h-16 bg-white border-b border-gray-200">
       <div className="flex items-center justify-between h-full px-4 lg:px-6">
@@ -34,17 +43,27 @@ export const Header: React.FC<HeaderProps> = ({ onMenuClick, onLogout }) => {
           </button>
 
           {/* 用户菜单 */}
-          <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-gray-100 cursor-pointer transition-colors">
-            <div className="w-8 h-8 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center">
-              <User className="w-4 h-4" />
+          {user ? (
+            <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-gray-100 cursor-pointer transition-colors">
+              <div className="w-8 h-8 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center">
+                <User className="w-4 h-4" />
+              </div>
+              <span className="hidden sm:block text-sm font-medium text-gray-700">{user.name}</span>
             </div>
-            <span className="hidden sm:block text-sm font-medium text-gray-700">Admin</span>
-          </div>
+          ) : (
+            <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-gray-100 cursor-pointer transition-colors" onClick={() => navigate('/login')}>
+              <div className="w-8 h-8 bg-gray-200 text-gray-600 rounded-full flex items-center justify-center">
+                <User className="w-4 h-4" />
+              </div>
+              <span className="hidden sm:block text-sm font-medium text-gray-700">登录</span>
+            </div>
+          )}
+
 
           {/* 登出 */}
-          {onLogout && (
+          {user && (
             <button
-              onClick={onLogout}
+              onClick={handleLogout}
               className="p-2 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
               title="退出登录"
             >

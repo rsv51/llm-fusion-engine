@@ -19,6 +19,7 @@ const navigation = [
   { name: '仪表盘', href: '/dashboard', icon: LayoutDashboard },
   { name: '分组管理', href: '/groups', icon: Users },
   { name: '密钥管理', href: '/keys', icon: Key },
+  { name: '供应商管理', href: '/providers', icon: Users },
   { name: '模型配置', href: '/models', icon: Box },
   { name: '请求日志', href: '/logs', icon: FileText },
   { name: '系统设置', href: '/settings', icon: Settings },

@@ -15,7 +15,7 @@ const api: AxiosInstance = axios.create({
 // 请求拦截器 - 添加认证 token
 api.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
-    const token = localStorage.getItem('adminToken') || sessionStorage.getItem('adminToken')
+    const token = localStorage.getItem('token')
     if (token && config.headers) {
       config.headers.Authorization = `Bearer ${token}`
     }
@@ -34,8 +34,7 @@ api.interceptors.response.use(
   (error: AxiosError) => {
     // 处理 401 未授权错误
     if (error.response?.status === 401) {
-      localStorage.removeItem('adminToken')
-      sessionStorage.removeItem('adminToken')
+      localStorage.removeItem('token')
       window.location.href = '/login'
       return Promise.reject(new Error('未授权,请重新登录'))
     }

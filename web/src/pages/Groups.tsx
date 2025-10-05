@@ -188,10 +188,12 @@ interface GroupModalProps {
 }
 
 const GroupModal: React.FC<GroupModalProps> = ({ isOpen, onClose, onSubmit, group }) => {
+  const [activeTab, setActiveTab] = useState('general')
   const [formData, setFormData] = useState<Partial<Group>>({
     name: '',
     description: '',
-    enabled: true
+    enabled: true,
+    modelAliases: {}
   })
 
   useEffect(() => {
@@ -199,15 +201,18 @@ const GroupModal: React.FC<GroupModalProps> = ({ isOpen, onClose, onSubmit, grou
       setFormData({
         name: group.name,
         description: group.description,
-        enabled: group.enabled
+        enabled: group.enabled,
+        modelAliases: group.modelAliases || {}
       })
     } else {
       setFormData({
         name: '',
         description: '',
-        enabled: true
+        enabled: true,
+        modelAliases: {}
       })
     }
+    setActiveTab('general')
   }, [group])
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -219,46 +224,130 @@ const GroupModal: React.FC<GroupModalProps> = ({ isOpen, onClose, onSubmit, grou
     onSubmit(formData)
   }
 
+  const renderGeneralSettings = () => (
+    <div className="space-y-4">
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-2">
+          分组名称 <span className="text-red-500">*</span>
+        </label>
+        <Input
+          value={formData.name}
+          onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+          placeholder="例如: 主要分组"
+          required
+        />
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-2">
+          描述
+        </label>
+        <textarea
+          value={formData.description || ''}
+          onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+          placeholder="分组描述信息"
+          rows={3}
+          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+        />
+      </div>
+
+      <div className="flex items-center gap-2">
+        <input
+          type="checkbox"
+          id="enabled"
+          checked={formData.enabled}
+          onChange={(e) => setFormData({ ...formData, enabled: e.target.checked })}
+          className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
+        />
+        <label htmlFor="enabled" className="text-sm text-gray-700">
+          启用此分组
+        </label>
+      </div>
+    </div>
+  )
+
+  const renderModelAliases = () => {
+    const aliases = formData.modelAliases || {}
+    const aliasEntries = Object.entries(aliases) as [string, string][]
+
+    const handleAliasChange = (index: number, key: string, value: string) => {
+      const newAliases = { ...aliases }
+      const oldKey = aliasEntries[index][0]
+      delete newAliases[oldKey]
+      newAliases[key] = value
+      setFormData({ ...formData, modelAliases: newAliases })
+    }
+
+    const addAlias = () => {
+      const newAliases = { ...aliases, [`new_model_${aliasEntries.length}`]: '' }
+      setFormData({ ...formData, modelAliases: newAliases })
+    }
+
+    const removeAlias = (key: string) => {
+      const newAliases = { ...aliases }
+      delete newAliases[key]
+      setFormData({ ...formData, modelAliases: newAliases })
+    }
+
+    return (
+      <div className="space-y-4">
+        {aliasEntries.map(([key, value], index) => (
+          <div key={index} className="flex items-center gap-2">
+            <Input
+              placeholder="原始模型名称"
+              value={key}
+              onChange={(e) => handleAliasChange(index, e.target.value, value)}
+              className="flex-1"
+            />
+            <Input
+              placeholder="映射后名称"
+              value={value}
+              onChange={(e) => handleAliasChange(index, key, e.target.value)}
+              className="flex-1"
+            />
+            <Button variant="danger" onClick={() => removeAlias(key)}>
+              <Trash2 className="w-4 h-4" />
+            </Button>
+          </div>
+        ))}
+        <Button onClick={addAlias} variant="secondary" className="w-full">
+          <Plus className="w-4 h-4 mr-2" />
+          添加映射
+        </Button>
+      </div>
+    )
+  }
+
   return (
     <Modal isOpen={isOpen} onClose={onClose} title={group ? '编辑分组' : '新建分组'}>
+      <div className="border-b border-gray-200 mb-4">
+        <nav className="-mb-px flex space-x-8" aria-label="Tabs">
+          <button
+            onClick={() => setActiveTab('general')}
+            className={`whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm ${
+              activeTab === 'general'
+                ? 'border-blue-500 text-blue-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+            }`}
+          >
+            通用设置
+          </button>
+          <button
+            onClick={() => setActiveTab('aliases')}
+            className={`whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm ${
+              activeTab === 'aliases'
+                ? 'border-blue-500 text-blue-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+            }`}
+          >
+            模型映射
+          </button>
+        </nav>
+      </div>
+
       <form onSubmit={handleSubmit} className="space-y-4">
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            分组名称 <span className="text-red-500">*</span>
-          </label>
-          <Input
-            value={formData.name}
-            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-            placeholder="例如: 主要分组"
-            required
-          />
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            描述
-          </label>
-          <textarea
-            value={formData.description || ''}
-            onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-            placeholder="分组描述信息"
-            rows={3}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
-        </div>
-
-        <div className="flex items-center gap-2">
-          <input
-            type="checkbox"
-            id="enabled"
-            checked={formData.enabled}
-            onChange={(e) => setFormData({ ...formData, enabled: e.target.checked })}
-            className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
-          />
-          <label htmlFor="enabled" className="text-sm text-gray-700">
-            启用此分组
-          </label>
-        </div>
+        {activeTab === 'general' && renderGeneralSettings()}
+        {activeTab === 'aliases' && renderModelAliases()}
 
         <div className="flex gap-3 pt-4">
           <Button type="button" variant="secondary" onClick={onClose} className="flex-1">
