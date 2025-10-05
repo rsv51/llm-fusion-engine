@@ -11,6 +11,7 @@ import (
 	"github.com/xuri/excelize/v2"
 	"gopkg.in/yaml.v2"
 	"gorm.io/gorm"
+	"llm-fusion-engine/internal/database"
 )
 
 // ImportHandler handles data import operations
@@ -194,16 +195,17 @@ func (h *ImportHandler) processExcelImport(f *excelize.File) gin.H {
 	}
 
 	// Process each sheet in order: Providers -> Models -> Associations
-	if providers, ok := f.GetSheetMap()["Providers"]; ok {
-		h.processProvidersSheet(f, providers, result)
+	sheetMap := f.GetSheetMap()
+	if _, ok := sheetMap["Providers"]; ok {
+		h.processProvidersSheet(f, "Providers", result)
 	}
 	
-	if models, ok := f.GetSheetMap()["Models"]; ok {
-		h.processModelsSheet(f, models, result)
+	if _, ok := sheetMap["Models"]; ok {
+		h.processModelsSheet(f, "Models", result)
 	}
 	
-	if associations, ok := f.GetSheetMap()["Associations"]; ok {
-		h.processAssociationsSheet(f, associations, result)
+	if _, ok := sheetMap["Associations"]; ok {
+		h.processAssociationsSheet(f, "Associations", result)
 	}
 
 	// Calculate summary
@@ -219,8 +221,8 @@ func (h *ImportHandler) processExcelImport(f *excelize.File) gin.H {
 	return result
 }
 
-func (h *ImportHandler) processProvidersSheet(f *excelize.File, sheet string, result gin.H) {
-	rows, err := f.GetRows(sheet)
+func (h *ImportHandler) processProvidersSheet(f *excelize.File, sheetName string, result gin.H) {
+	rows, err := f.GetRows(sheetName)
 	if err != nil || len(rows) < 2 {
 		return
 	}
@@ -297,8 +299,8 @@ func (h *ImportHandler) processProvidersSheet(f *excelize.File, sheet string, re
 	}
 }
 
-func (h *ImportHandler) processModelsSheet(f *excelize.File, sheet string, result gin.H) {
-	rows, err := f.GetRows(sheet)
+func (h *ImportHandler) processModelsSheet(f *excelize.File, sheetName string, result gin.H) {
+	rows, err := f.GetRows(sheetName)
 	if err != nil || len(rows) < 2 {
 		return
 	}
@@ -372,8 +374,8 @@ func (h *ImportHandler) processModelsSheet(f *excelize.File, sheet string, resul
 	}
 }
 
-func (h *ImportHandler) processAssociationsSheet(f *excelize.File, sheet string, result gin.H) {
-	rows, err := f.GetRows(sheet)
+func (h *ImportHandler) processAssociationsSheet(f *excelize.File, sheetName string, result gin.H) {
+	rows, err := f.GetRows(sheetName)
 	if err != nil || len(rows) < 2 {
 		return
 	}

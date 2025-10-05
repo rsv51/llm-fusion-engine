@@ -10,6 +10,7 @@ import (
 	"github.com/xuri/excelize/v2"
 	"gopkg.in/yaml.v2"
 	"gorm.io/gorm"
+	"llm-fusion-engine/internal/database"
 )
 
 // ExportHandler handles data export operations
