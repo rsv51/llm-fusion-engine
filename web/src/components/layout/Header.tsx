@@ -48,7 +48,7 @@ export const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
               <div className="w-8 h-8 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center">
                 <User className="w-4 h-4" />
               </div>
-              <span className="hidden sm:block text-sm font-medium text-gray-700">{user.name}</span>
+              <span className="hidden sm:block text-sm font-medium text-gray-700">{user.username}</span>
             </div>
           ) : (
             <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-gray-100 cursor-pointer transition-colors" onClick={() => navigate('/login')}>

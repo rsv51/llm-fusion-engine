@@ -31,6 +31,7 @@ func main() {
 
 	// 3. Initialize Handlers
 	chatHandler := v1.NewChatHandler(multiProviderService)
+	authHandler := admin.NewAuthHandler(db)
 	groupHandler := admin.NewGroupHandler(db)
 	statsHandler := admin.NewStatsHandler(db)
 	keyHandler := admin.NewKeyHandler(db)
@@ -53,6 +54,12 @@ func main() {
 	v1Group := router.Group("/v1")
 	{
 		v1Group.POST("/chat/completions", chatHandler.ChatCompletions)
+	}
+
+	// Auth API (no auth required)
+	authGroup := router.Group("/api/auth")
+	{
+		authGroup.POST("/login", authHandler.Login)
 	}
 
 	// Admin API for management

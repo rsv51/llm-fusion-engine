@@ -14,10 +14,7 @@ export const useAuth = () => {
       const mockUser: User = {
         id: 1,
         username: 'admin',
-        name: 'Admin User',
-        email: 'admin@example.com',
-        role: 1,
-        status: 1,
+        isAdmin: true,
       };
       setUser(mockUser);
     } else {
@@ -25,7 +22,7 @@ export const useAuth = () => {
     }
   }, [isAuthenticated]);
 
-  const login = async (credentials: {username: string, password?: string, github_token?: string}) => {
+  const login = async (credentials: {username: string, password: string}) => {
     const data = await authApi.login(credentials);
     setUser(data.user);
     setIsAuthenticated(true);

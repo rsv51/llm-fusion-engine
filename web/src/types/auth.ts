@@ -1,16 +1,12 @@
 export interface LoginRequest {
   username: string;
-  password?: string;
-  github_token?: string;
+  password: string;
 }
 
 export interface User {
   id: number;
   username: string;
-  name: string;
-  email: string;
-  role: number;
-  status: number;
+  isAdmin: boolean;
 }
 
 export interface LoginResponse {

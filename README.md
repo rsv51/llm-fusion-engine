@@ -48,7 +48,15 @@ docker run -d -p 8080:8080 llm-fusion-engine:latest
 
 ### 1. 访问管理界面
 
-打开浏览器访问 `http://localhost:8080`，你会看到：
+打开浏览器访问 `http://localhost:8080`，首次访问会显示登录页面。
+
+**默认管理员账号：**
+- 用户名：`admin`
+- 密码：`admin`
+
+> ⚠️ **安全提示**：首次登录后，建议立即修改默认密码以确保系统安全。
+
+登录后，你会看到：
 
 - **Dashboard**: 系统统计概览
   - 总组数、已启用组数
@@ -232,6 +240,14 @@ curl -X POST http://localhost:8080/api/admin/groups \
 - `PORT` - 服务器端口（默认：8080）
 - `DB_PATH` - 数据库文件路径（默认：fusion.db）
 - `GIN_MODE` - Gin 运行模式（release/debug，默认：debug）
+
+### 用户管理
+
+系统在首次启动时会自动创建默认管理员账号：
+- 用户名：`admin`
+- 密码：`admin`
+
+如果数据库中已存在用户，则不会创建默认账号。
 
 ### 数据持久化
 
