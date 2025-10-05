@@ -2,9 +2,10 @@
 FROM node:18-alpine AS frontend-builder
 WORKDIR /app/web
 COPY web/package*.json ./
-RUN npm install
+RUN npm ci --only=production=false
 COPY web/ .
-RUN npm run build
+# 使用 npx 确保可以找到并执行 tsc 和 vite
+RUN npx tsc && npx vite build
 
 # Stage 2: Build the backend
 FROM golang:1.21-alpine AS backend-builder
