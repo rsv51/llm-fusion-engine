@@ -9,9 +9,15 @@ RUN npm run build
 # Stage 2: Build the backend
 FROM golang:1.21-alpine AS backend-builder
 WORKDIR /app
-COPY go.mod ./
-RUN go mod tidy
+# Copy all source code first, including go.mod
 COPY . .
+
+# Now that all source code is present, run go mod tidy to ensure
+# go.mod and go.sum are complete and in sync with the code.
+RUN go mod tidy
+
+# Build the application
+# The build command will now use the correctly generated go.sum
 RUN CGO_ENABLED=0 GOOS=linux go build -o /app/server ./cmd/server/main.go
 
 # Stage 3: Create the final image
