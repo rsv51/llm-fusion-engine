@@ -25,26 +25,26 @@ type User struct {
 // ProxyKey is a key used by end-users to access the API.
 type ProxyKey struct {
 	BaseModel
-	UserID            uint
-	Key               string `gorm:"uniqueIndex;not null"`
-	Enabled           bool   `gorm:"default:true"`
-	AllowedGroups     string // JSON array of group IDs
-	GroupBalancePolicy string `gorm:"default:'failover'"`
-	GroupWeights      string // JSON object for weighted balancing
-	RpmLimit          int
-	TpmLimit          int
+	UserID             uint   `json:"userId"`
+	Key                string `gorm:"uniqueIndex;not null" json:"key"`
+	Enabled            bool   `gorm:"default:true" json:"enabled"`
+	AllowedGroups      string `json:"allowedGroups"` // JSON array of group IDs
+	GroupBalancePolicy string `gorm:"default:'failover'" json:"groupBalancePolicy"`
+	GroupWeights       string `json:"groupWeights"` // JSON object for weighted balancing
+	RpmLimit           int    `json:"rpmLimit"`
+	TpmLimit           int    `json:"tpmLimit"`
 }
 
 // Group represents a collection of provider configurations for routing.
 type Group struct {
 	BaseModel
-	Name              string `gorm:"uniqueIndex;not null"`
-	Enabled           bool   `gorm:"default:true"`
-	Priority          int    `gorm:"default:0"`
-	Models            string `gorm:"type:text"` // JSON array of supported models
-	ModelAliases      string `gorm:"type:text"` // JSON object for model name mapping
-	LoadBalancePolicy string `gorm:"default:'failover'"` // e.g., failover, round_robin, weighted
-	Providers         []Provider // Has-many relationship
+	Name              string     `gorm:"uniqueIndex;not null" json:"name"`
+	Enabled           bool       `gorm:"default:true" json:"enabled"`
+	Priority          int        `gorm:"default:0" json:"priority"`
+	Models            string     `gorm:"type:text" json:"models"` // JSON array of supported models
+	ModelAliases      string     `gorm:"type:text" json:"modelAliases"` // JSON object for model name mapping
+	LoadBalancePolicy string     `gorm:"default:'failover'" json:"loadBalancePolicy"` // e.g., failover, round_robin, weighted
+	Providers         []Provider `json:"providers"`                                   // Has-many relationship
 }
 
 // Provider holds the configuration for a specific LLM provider within a group.
@@ -66,41 +66,41 @@ type Provider struct {
 // ApiKey stores an individual API key for a provider.
 type ApiKey struct {
 	BaseModel
-	ProviderID  uint   `gorm:"index"`
-	Key         string `gorm:"uniqueIndex;not null"`
-	LastUsed    time.Time
-	IsHealthy   bool   `gorm:"default:true"`
-	RpmLimit    int    // Requests per minute limit
-	TpmLimit    int    // Tokens per minute limit
+	ProviderID uint      `gorm:"index" json:"providerId"`
+	Key        string    `gorm:"uniqueIndex;not null" json:"key"`
+	LastUsed   time.Time `json:"lastUsed"`
+	IsHealthy  bool      `gorm:"default:true" json:"isHealthy"`
+	RpmLimit   int       `json:"rpmLimit"`
+	TpmLimit   int       `json:"tpmLimit"`
 }
 
 // RequestLog records API request details for monitoring and analytics.
 type RequestLog struct {
 	BaseModel
-	GroupID          uint   `gorm:"index"`
-	ProviderID       uint   `gorm:"index"`
-	Model            string `gorm:"index"`
-	StatusCode       int    `gorm:"index"`
-	LatencyMs        int64
-	PromptTokens     int
-	CompletionTokens int
-	TotalTokens      int
-	ErrorMessage     string
-	RequestIP        string
-	UserAgent        string
+	GroupID          uint   `gorm:"index" json:"groupId"`
+	ProviderID       uint   `gorm:"index" json:"providerId"`
+	Model            string `gorm:"index" json:"model"`
+	StatusCode       int    `gorm:"index" json:"statusCode"`
+	LatencyMs        int64  `json:"latencyMs"`
+	PromptTokens     int    `json:"promptTokens"`
+	CompletionTokens int    `json:"completionTokens"`
+	TotalTokens      int    `json:"totalTokens"`
+	ErrorMessage     string `json:"errorMessage"`
+	RequestIP        string `json:"requestIp"`
+	UserAgent        string `json:"userAgent"`
 }
 
 // Model represents a specific LLM model available in the system.
 type Model struct {
 	BaseModel
-	Name         string `gorm:"uniqueIndex;not null"`
-	Provider     string `gorm:"index"`
-	Category     string // text/image/audio/video
-	MaxTokens    int
-	InputPrice   float64
-	OutputPrice  float64
-	Description  string
-	Enabled      bool `gorm:"default:true"`
+	Name        string  `gorm:"uniqueIndex;not null" json:"name"`
+	Provider    string  `gorm:"index" json:"provider"`
+	Category    string  `json:"category"` // text/image/audio/video
+	MaxTokens   int     `json:"maxTokens"`
+	InputPrice  float64 `json:"inputPrice"`
+	OutputPrice float64 `json:"outputPrice"`
+	Description string  `json:"description"`
+	Enabled     bool    `gorm:"default:true" json:"enabled"`
 }
 
 // ModelMapping allows aliasing model names to specific provider models.
