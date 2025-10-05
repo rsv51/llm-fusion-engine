@@ -1,7 +1,8 @@
 import React, { useState } from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { Sidebar, Header } from './components/layout'
-import { Dashboard, Groups, Keys, Logs, Models, Settings, Providers, LoginPage, ModelMappings } from './pages'
+import { Dashboard, Groups, Keys, Logs, Models, Settings, Providers, LoginPage } from './pages'
+import { ModelMappings } from './pages/ModelMappings'
 
 import PrivateRoute from './components/auth/PrivateRoute';
 
