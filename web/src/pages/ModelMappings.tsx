@@ -20,26 +20,27 @@ export const ModelMappings: React.FC = () => {
     setError(null); // 清除之前的错误
     try {
       setLoading(true);
-      const [mappingsResponse, providersResponse] = await Promise.all([
+      // api.get() 已经返回了 response.data
+      const [mappingsPaginationResponse, providersPaginationResponse] = await Promise.all([
         api.get<PaginationResponse<ModelMapping>>('/admin/model-mappings'),
         api.get<PaginationResponse<Provider>>('/admin/providers'),
       ]);
-      console.log('ModelMappings API Response:', mappingsResponse); // 添加日志
-      console.log('Providers API Response in ModelMappings:', providersResponse); // 添加日志
+      console.log('ModelMappings API Response:', mappingsPaginationResponse); // 添加日志
+      console.log('Providers API Response in ModelMappings:', providersPaginationResponse); // 添加日志
 
       // 安全地检查和设置数据
-      if (mappingsResponse && mappingsResponse.data && Array.isArray(mappingsResponse.data.data)) {
-        setMappings(mappingsResponse.data.data);
+      if (mappingsPaginationResponse && Array.isArray(mappingsPaginationResponse.data)) {
+        setMappings(mappingsPaginationResponse.data);
       } else {
-        const errorMsg = 'ModelMappings API 响应数据格式不正确: ' + JSON.stringify(mappingsResponse);
+        const errorMsg = 'ModelMappings API 响应数据格式不正确: ' + JSON.stringify(mappingsPaginationResponse);
         console.error(errorMsg);
         setError(errorMsg);
       }
 
-      if (providersResponse && providersResponse.data && Array.isArray(providersResponse.data.data)) {
-        setProviders(providersResponse.data.data);
+      if (providersPaginationResponse && Array.isArray(providersPaginationResponse.data)) {
+        setProviders(providersPaginationResponse.data);
       } else {
-        const errorMsg = 'Providers API (in ModelMappings) 响应数据格式不正确: ' + JSON.stringify(providersResponse);
+        const errorMsg = 'Providers API (in ModelMappings) 响应数据格式不正确: ' + JSON.stringify(providersPaginationResponse);
         console.error(errorMsg);
         setError(errorMsg);
       }

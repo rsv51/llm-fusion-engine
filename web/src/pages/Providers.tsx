@@ -19,13 +19,14 @@ export const Providers: React.FC = () => {
     setError(null); // 清除之前的错误
     try {
       setLoading(true)
-      const response = await api.get<PaginationResponse<Provider>>('/admin/providers')
-      console.log('Providers API Response:', response) // 添加日志
+      // api.get() 已经返回了 response.data，所以 response 就是 PaginationResponse<Provider>
+      const paginationResponse = await api.get<PaginationResponse<Provider>>('/admin/providers')
+      console.log('Providers API Response:', paginationResponse) // 添加日志
       // 尝试安全地访问数据
-      if (response && response.data && Array.isArray(response.data.data)) {
-        setProviders(response.data.data);
+      if (paginationResponse && Array.isArray(paginationResponse.data)) {
+        setProviders(paginationResponse.data);
       } else {
-        const errorMsg = 'API 响应数据格式不正确: ' + JSON.stringify(response);
+        const errorMsg = 'API 响应数据格式不正确: ' + JSON.stringify(paginationResponse);
         console.error(errorMsg);
         setError(errorMsg);
       }
