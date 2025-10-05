@@ -45,12 +45,12 @@ func (s *MultiProviderService) ProcessChatCompletionHttpAsync(
 	if len(routeResult.Group.Providers) == 0 {
 		return nil, errors.New("selected group has no providers")
 	}
-	providerType := routeResult.Group.Providers[0].ProviderType
-
-	provider, err := s.providerFactory.GetProvider(providerType)
-	if err != nil {
-		return nil, err
-	}
+	// providerType := routeResult.Group.Providers[0].ProviderType
+	// TODO: Use provider factory when implementing actual provider logic
+	// provider, err := s.providerFactory.GetProvider(providerType)
+	// if err != nil {
+	// 	return nil, err
+	// }
 
 	// 3. Prepare and forward the request
 	// The actual implementation of this will be in the provider instance.
