@@ -34,14 +34,22 @@ func (h *GroupHandler) CreateGroup(c *gin.Context) {
 	c.JSON(http.StatusOK, group)
 }
 
-// GetGroups retrieves all groups.
+// GetGroups retrieves all groups with pagination response format.
 func (h *GroupHandler) GetGroups(c *gin.Context) {
 	var groups []database.Group
 	if err := h.db.Find(&groups).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve groups"})
 		return
 	}
-	c.JSON(http.StatusOK, groups)
+	
+	// Return in pagination response format for frontend compatibility
+	c.JSON(http.StatusOK, gin.H{
+		"items":      groups,
+		"total":      len(groups),
+		"page":       1,
+		"pageSize":   len(groups),
+		"totalPages": 1,
+	})
 }
 
 // GetGroup retrieves a single group by ID.
