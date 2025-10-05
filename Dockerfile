@@ -31,9 +31,10 @@ RUN npm run build
 # Stage 2: Build the backend
 FROM golang:1.21-alpine AS backend-builder
 WORKDIR /app
-# Copy go.mod and go.sum first to leverage Docker's layer caching.
-COPY go.mod go.sum ./
-RUN go mod download
+# Copy go.mod first to leverage Docker's layer caching.
+COPY go.mod ./
+# This creates go.sum and ensures dependencies are clean before building.
+RUN go mod tidy
 
 # Copy the rest of the source code
 COPY . .
