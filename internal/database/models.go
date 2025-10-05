@@ -67,3 +67,19 @@ type ApiKey struct {
 	RpmLimit    int    // Requests per minute limit
 	TpmLimit    int    // Tokens per minute limit
 }
+
+// RequestLog records API request details for monitoring and analytics.
+type RequestLog struct {
+	BaseModel
+	GroupID          uint   `gorm:"index"`
+	ProviderID       uint   `gorm:"index"`
+	Model            string `gorm:"index"`
+	StatusCode       int    `gorm:"index"`
+	LatencyMs        int64
+	PromptTokens     int
+	CompletionTokens int
+	TotalTokens      int
+	ErrorMessage     string
+	RequestIP        string
+	UserAgent        string
+}
