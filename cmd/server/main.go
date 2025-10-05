@@ -34,6 +34,11 @@ func main() {
 	// 4. Setup Router
 	router := gin.Default()
 	
+	// Serve static files from web/dist
+	router.Static("/assets", "./web/dist/assets")
+	router.StaticFile("/", "./web/dist/index.html")
+	router.StaticFile("/favicon.ico", "./web/dist/favicon.ico")
+	
 	// API v1 for proxying
 	v1Group := router.Group("/v1")
 	{
@@ -49,6 +54,11 @@ func main() {
 		adminGroup.PUT("/groups/:id", groupHandler.UpdateGroup)
 		adminGroup.DELETE("/groups/:id", groupHandler.DeleteGroup)
 	}
+	
+	// NoRoute handler for SPA routing
+	router.NoRoute(func(c *gin.Context) {
+		c.File("./web/dist/index.html")
+	})
 
 	// 5. Start Server
 	fmt.Println("Starting server on port 8080...")
