@@ -50,17 +50,17 @@ type Group struct {
 // Provider holds the configuration for a specific LLM provider within a group.
 type Provider struct {
 	BaseModel
-	GroupID      uint   `gorm:"index"`
-	ProviderType string `gorm:"not null"` // e.g., openai, anthropic, gemini
-	ApiKeys      []ApiKey // Has-many relationship
-	Weight       uint   `gorm:"default:1"`
-	Enabled      bool   `gorm:"default:true"`
-	BaseURL      string `gorm:"type:varchar(255)"`
-	Timeout      int    `gorm:"default:30"`    // 秒
-	MaxRetries   int    `gorm:"default:3"`
-	HealthStatus string `gorm:"default:'unknown'"` // healthy/unhealthy/unknown
-	LastChecked  *time.Time
-	Latency      uint   // in milliseconds
+	GroupID      uint   `gorm:"index" json:"groupId"`
+	ProviderType string `gorm:"not null" json:"providerType"` // e.g., openai, anthropic, gemini
+	ApiKeys      []ApiKey `json:"apiKeys"` // Has-many relationship
+	Weight       uint   `gorm:"default:1" json:"weight"`
+	Enabled      bool   `gorm:"default:true" json:"enabled"`
+	BaseURL      string `gorm:"type:varchar(255)" json:"baseUrl"`
+	Timeout      int    `gorm:"default:30" json:"timeout"`    // 秒
+	MaxRetries   int    `gorm:"default:3" json:"maxRetries"`
+	HealthStatus string `gorm:"default:'unknown'" json:"healthStatus"` // healthy/unhealthy/unknown
+	LastChecked  *time.Time `json:"lastChecked"`
+	Latency      uint   `json:"latency"` // in milliseconds
 }
 
 // ApiKey stores an individual API key for a provider.
@@ -106,8 +106,8 @@ type Model struct {
 // ModelMapping allows aliasing model names to specific provider models.
 type ModelMapping struct {
 	BaseModel
-	UserFriendlyName string `gorm:"uniqueIndex;not null"` // e.g., "fast-model"
-	ProviderModelName string `gorm:"not null"`           // e.g., "gpt-3.5-turbo"
-	ProviderID        uint   `gorm:"not null"`           // Foreign key to Provider
-	Provider          Provider `gorm:"foreignKey:ProviderID"`
+	UserFriendlyName  string `gorm:"uniqueIndex;not null" json:"userFriendlyName"` // e.g., "fast-model"
+	ProviderModelName string `gorm:"not null" json:"providerModelName"`           // e.g., "gpt-3.5-turbo"
+	ProviderID        uint   `gorm:"not null" json:"providerId"`           // Foreign key to Provider
+	Provider          Provider `gorm:"foreignKey:ProviderID" json:"provider"`
 }
