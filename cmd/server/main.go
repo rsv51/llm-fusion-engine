@@ -30,6 +30,7 @@ func main() {
 	// 3. Initialize Handlers
 	chatHandler := v1.NewChatHandler(multiProviderService)
 	groupHandler := admin.NewGroupHandler(db)
+	statsHandler := admin.NewStatsHandler(db)
 
 	// 4. Setup Router
 	router := gin.Default()
@@ -48,6 +49,7 @@ func main() {
 	// Admin API for management
 	adminGroup := router.Group("/api/admin")
 	{
+		adminGroup.GET("/stats", statsHandler.GetStats)
 		adminGroup.POST("/groups", groupHandler.CreateGroup)
 		adminGroup.GET("/groups", groupHandler.GetGroups)
 		adminGroup.GET("/groups/:id", groupHandler.GetGroup)
