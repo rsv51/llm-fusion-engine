@@ -9,7 +9,7 @@ USER appuser
 # Copy package files and install dependencies as the non-root user
 # Using --chown ensures the files are owned by the correct user
 COPY --chown=appuser:appgroup web/package*.json ./
-RUN npm ci
+RUN npm install
 
 # Copy the rest of the source code
 COPY --chown=appuser:appgroup web/ .
