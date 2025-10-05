@@ -1,24 +1,18 @@
 # Stage 1: Build the frontend
-FROM node:18-alpine AS frontend-builder
-
-# Create a non-root user first
-RUN addgroup -S appgroup && adduser -S appuser -G appgroup
-
-# Create app directory and set permissions
-RUN mkdir -p /app/web && chown -R appuser:appgroup /app
-
-# Set the working directory
+# Use a slim, Debian-based image for better compatibility with npm native modules
+FROM node:18-slim AS frontend-builder
 WORKDIR /app/web
 
-# Switch to the non-root user
+# Create and switch to a non-root user
+RUN addgroup --system appgroup && adduser --system --ingroup appgroup appuser
 USER appuser
 
 # Copy package files and install dependencies
-COPY web/package*.json ./
-RUN npm install --cache .npm --prefer-offline
+COPY --chown=appuser:appgroup web/package*.json ./
+RUN npm install
 
 # Copy the rest of the source code
-COPY web/ .
+COPY --chown=appuser:appgroup web/ .
 
 # Run the build script
 RUN npm run build
@@ -32,17 +26,17 @@ RUN CGO_ENABLED=0 GOOS=linux go build -o /app/server ./cmd/server/main.go
 
 # Stage 3: Create the final image
 FROM alpine:latest
+WORKDIR /app
 
 # Create a non-root user for the final image
 RUN addgroup -S appgroup && adduser -S appuser -G appgroup
 
-# Create app directory and set permissions
-WORKDIR /app
-RUN chown -R appuser:appgroup /app
-
 # Copy built assets
 COPY --from=frontend-builder /app/web/dist ./web/dist
 COPY --from=backend-builder /app/server ./server
+
+# Set ownership for the entire app directory
+RUN chown -R appuser:appgroup /app
 
 # Switch to the non-root user
 USER appuser
