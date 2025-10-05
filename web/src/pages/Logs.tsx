@@ -21,12 +21,12 @@ export const Logs: React.FC = () => {
         page: params?.page || pagination.page,
         pageSize: params?.pageSize || pagination.pageSize
       })
-      setLogs(response.items)
+      setLogs(response.data)
       setPagination({
-        page: response.page,
-        pageSize: response.pageSize,
-        total: response.total,
-        totalPage: response.totalPages
+      	page: response.pagination.page,
+      	pageSize: response.pagination.pageSize,
+      	total: response.pagination.total,
+      	totalPage: response.pagination.totalPage
       })
     } catch (error) {
       console.error('Failed to fetch logs:', error)

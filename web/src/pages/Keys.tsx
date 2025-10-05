@@ -26,8 +26,8 @@ export const Keys: React.FC = () => {
   const loadGroups = async () => {
     try {
       const response = await groupsApi.getGroups()
-      setGroups(response.items)
-    } catch (error) {
+      setGroups(response.data)
+     } catch (error) {
       console.error('加载分组失败:', error)
     }
   }
@@ -38,11 +38,11 @@ export const Keys: React.FC = () => {
       const response = await keysApi.getKeys({
         ...pagination,
         groupId: selectedGroup || undefined
-      })
-      setKeys(response.items)
-      setTotal(response.total)
-    } catch (error) {
-      console.error('加载密钥失败:', error)
+       })
+       setKeys(response.data)
+       setTotal(response.pagination.total)
+      } catch (error) {
+       console.error('加载密钥失败:', error)
     } finally {
       setLoading(false)
     }

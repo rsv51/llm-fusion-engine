@@ -30,12 +30,12 @@ export const Dashboard: React.FC = () => {
         logsApi.getLogs({ page: 1, pageSize: 5 })
       ])
       setStats(statsData)
-      setRecentLogs(logsData.items.map((log) => ({
-        id: log.id,
-        model: log.model,
-        providerName: log.providerName,
-        statusCode: log.statusCode,
-        createdAt: log.createdAt
+      setRecentLogs(logsData.data.map((log: any) => ({
+      	id: log.id,
+      	model: log.model,
+      	providerName: log.providerName,
+      	statusCode: log.statusCode,
+      	createdAt: log.createdAt
       })))
     } catch (error) {
       console.error('加载数据失败:', error)
