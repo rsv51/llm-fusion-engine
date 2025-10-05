@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 	"strconv"
 
-	"github.com/360EntSecGroup-Skylar/excelize/v2"
+	"github.com/xuri/excelize/v2"
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
 	"mime/multipart"

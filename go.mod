@@ -3,7 +3,7 @@ module llm-fusion-engine
 go 1.21
 
 require (
-	github.com/360EntSecGroup-Skylar/excelize/v2 v2.8.1
+	github.com/xuri/excelize/v2 v2.8.1
 	github.com/gin-gonic/gin v1.9.1
 	github.com/glebarez/sqlite v1.11.0
 	gorm.io/gorm v1.25.5
