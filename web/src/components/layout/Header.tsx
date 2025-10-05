@@ -31,7 +31,6 @@ export const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
         {/* 中间 - 系统状态 */}
         <div className="hidden lg:flex items-center gap-4">
           <Badge variant="success">系统正常</Badge>
-          <span className="text-sm text-gray-500">运行时间: 24h 35m</span>
         </div>
 
         {/* 右侧 - 操作按钮 */}

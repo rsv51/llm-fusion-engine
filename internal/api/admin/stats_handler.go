@@ -11,12 +11,13 @@ import (
 
 // StatsHandler handles statistics endpoints.
 type StatsHandler struct {
-	db *gorm.DB
+	db        *gorm.DB
+	startTime time.Time
 }
 
 // NewStatsHandler creates a new StatsHandler.
-func NewStatsHandler(db *gorm.DB) *StatsHandler {
-	return &StatsHandler{db: db}
+func NewStatsHandler(db *gorm.DB, startTime time.Time) *StatsHandler {
+	return &StatsHandler{db: db, startTime: startTime}
 }
 
 // GetStats returns overall system statistics for the last 24 hours.
@@ -75,6 +76,7 @@ func (h *StatsHandler) GetStats(c *gin.Context) {
 		"avgResponseTimeMs": avgResponseTimeMs,
 		"activeKeys":        activeKeys,
 		"providers":         providerStats,
+		"startTime":         h.startTime,
 	}
 
 	c.JSON(http.StatusOK, stats)

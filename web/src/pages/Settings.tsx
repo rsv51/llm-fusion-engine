@@ -1,14 +1,15 @@
 import React, { useState } from 'react'
 import { Card, Button } from '../components/ui'
-import { Save, RefreshCw, Database, Shield, Bell, Globe, Upload, Download, User } from 'lucide-react'
+import { Save, RefreshCw, Database, Shield, Bell, Globe, Upload, Download, User, Copy } from 'lucide-react'
+import { api } from '../services'
 import { authApi } from '../services'
 
 export const Settings: React.FC = () => {
   const [saving, setSaving] = useState(false)
   const [activeTab, setActiveTab] = useState('general')
   const [importing, setImporting] = useState(false)
-  const [importFile, setImportFile] = useState<File | null>(null)
-  const [importType, setImportType] = useState('groups')
+  const [migrationData, setMigrationData] = useState('')
+  const [migrationFormat, setMigrationFormat] = useState('json')
   const [username, setUsername] = useState('admin')
   const [currentPassword, setCurrentPassword] = useState('')
   const [newPassword, setNewPassword] = useState('')
@@ -33,48 +34,40 @@ export const Settings: React.FC = () => {
     }
   };
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files) {
-      setImportFile(e.target.files[0])
+
+  const handleExport = async () => {
+    try {
+      const response = await api.get(`/admin/export/all?format=${migrationFormat}`, { responseType: 'text' });
+      setMigrationData(response.data as string);
+    } catch (error) {
+      console.error('导出失败:', error);
+      alert('导出失败');
     }
-  }
+  };
 
   const handleImport = async () => {
-    if (!importFile) {
-      alert('请选择要导入的文件')
-      return
+    if (!migrationData.trim()) {
+      alert('请在文本框中粘贴要导入的配置。');
+      return;
     }
-    setImporting(true)
-    const formData = new FormData()
-    formData.append('file', importFile)
-    
+    setImporting(true);
     try {
-      const response = await fetch(`/api/admin/import/${importType}`, {
-        method: 'POST',
-        body: formData,
-      })
-      const result = await response.json()
-      if (response.ok) {
-        alert(result.message)
-      } else {
-        throw new Error(result.error || '导入失败')
-      }
+      await api.post('/admin/import/all', migrationData, {
+        headers: { 'Content-Type': migrationFormat === 'json' ? 'application/json' : 'application/x-yaml' },
+      });
+      alert('导入成功！');
     } catch (error) {
-      console.error('导入失败:', error)
-      if (error instanceof Error) {
-        alert(`导入失败: ${error.message}`)
-      } else {
-        alert('导入失败: 发生未知错误')
-      }
+      console.error('导入失败:', error);
+      alert('导入失败');
     } finally {
-      setImporting(false)
-      setImportFile(null)
+      setImporting(false);
     }
-  }
+  };
 
-  const handleExport = (dataType: string, format: 'json' | 'yaml') => {
-    window.location.href = `/api/admin/export/${dataType}?format=${format}`
-  }
+  const handleCopy = () => {
+    navigator.clipboard.writeText(migrationData);
+    alert('已复制到剪贴板');
+  };
 
   const renderGeneralSettings = () => (
     <div className="space-y-6">
@@ -165,56 +158,38 @@ export const Settings: React.FC = () => {
     </div>
   )
 
-  const renderImportExport = () => (
-    <div className="space-y-6">
-      {/* 数据导出 */}
-      <Card>
-        <div className="flex items-center gap-3 mb-4">
-          <Download className="w-5 h-5 text-blue-600" />
-          <h2 className="text-lg font-semibold text-gray-900">数据导出</h2>
+  const renderMigration = () => (
+    <Card>
+      <div className="p-6">
+        <h2 className="text-lg font-semibold text-gray-900">配置迁移</h2>
+        <p className="text-sm text-gray-500 mt-1">在此处导出或导入您的系统配置。</p>
+        
+        <div className="mt-4">
+          <textarea
+            className="w-full h-64 p-2 border rounded font-mono text-sm"
+            value={migrationData}
+            onChange={(e) => setMigrationData(e.target.value)}
+            placeholder="在此处粘贴您的JSON或YAML配置以进行导入，或点击“导出”生成当前配置。"
+          />
         </div>
-        <div className="space-y-4">
-          <div className="flex items-center justify-between p-4 border rounded-lg">
-            <div>
-              <p className="font-medium text-gray-900">导出所有配置</p>
-              <p className="text-sm text-gray-500">将所有系统配置（包括组、提供商、密钥和模型映射）导出为一个文件。</p>
-            </div>
-            <div className="flex gap-2">
-              <Button variant="secondary" onClick={() => handleExport('all', 'json')}>JSON</Button>
-              <Button variant="secondary" onClick={() => handleExport('all', 'yaml')}>YAML</Button>
-            </div>
-          </div>
-        </div>
-      </Card>
 
-      {/* 数据导入 */}
-      <Card>
-        <div className="flex items-center gap-3 mb-4">
-          <Upload className="w-5 h-5 text-blue-600" />
-          <h2 className="text-lg font-semibold text-gray-900">数据导入</h2>
-        </div>
-        <div className="p-4 border rounded-lg space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              选择配置文件 (.json, .yaml)
-            </label>
-            <div className="flex items-center gap-4">
-              <input
-                type="file"
-                onChange={handleFileChange}
-                accept=".json, .yaml, .yml"
-                className="flex-1 text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
-              />
-              <Button onClick={handleImport} disabled={!importFile || importing}>
-                {importing ? '导入中...' : '开始导入'}
-              </Button>
-            </div>
-            {importFile && <p className="text-sm text-gray-500 mt-2">已选择文件: {importFile.name}</p>}
+        <div className="mt-4 flex justify-between items-center">
+          <div className="flex gap-2">
+            <Button onClick={handleExport}>导出</Button>
+            <Button onClick={handleImport} disabled={importing}>{importing ? '导入中...' : '导入'}</Button>
+            <Button variant="secondary" onClick={handleCopy}><Copy className="w-4 h-4 mr-2" />复制</Button>
+          </div>
+          <div className="flex items-center gap-2">
+            <label className="text-sm font-medium">格式:</label>
+            <select value={migrationFormat} onChange={(e) => setMigrationFormat(e.target.value)} className="p-2 border rounded">
+              <option value="json">JSON</option>
+              <option value="yaml">YAML</option>
+            </select>
           </div>
         </div>
-      </Card>
-    </div>
-  )
+      </div>
+    </Card>
+  );
 
   return (
     <div className="space-y-6">
@@ -248,14 +223,14 @@ export const Settings: React.FC = () => {
             通用设置
           </button>
           <button
-            onClick={() => setActiveTab('import-export')}
+            onClick={() => setActiveTab('migration')}
             className={`whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm ${
-              activeTab === 'import-export'
+              activeTab === 'migration'
                 ? 'border-blue-500 text-blue-600'
                 : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
             }`}
           >
-            导入/导出
+            迁移
           </button>
         </nav>
       </div>
@@ -263,7 +238,7 @@ export const Settings: React.FC = () => {
       {/* Tab Content */}
       <div className="pt-6">
         {activeTab === 'general' && renderGeneralSettings()}
-        {activeTab === 'import-export' && renderImportExport()}
+        {activeTab === 'migration' && renderMigration()}
       </div>
     </div>
   )

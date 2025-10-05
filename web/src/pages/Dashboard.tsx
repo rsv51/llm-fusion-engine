@@ -16,12 +16,33 @@ export const Dashboard: React.FC = () => {
   const [stats, setStats] = useState<SystemStats | null>(null)
   const [recentLogs, setRecentLogs] = useState<DisplayLog[]>([])
   const [loading, setLoading] = useState(true)
+  const [uptime, setUptime] = useState('')
 
   useEffect(() => {
     loadData()
     const interval = setInterval(loadData, 30000) // 每30秒刷新
     return () => clearInterval(interval)
   }, [])
+
+  useEffect(() => {
+    if (stats?.startTime) {
+      const updateUptime = () => {
+        const startTime = new Date(stats.startTime)
+        const now = new Date()
+        const diff = now.getTime() - startTime.getTime()
+
+        const days = Math.floor(diff / (1000 * 60 * 60 * 24))
+        const hours = Math.floor((diff / (1000 * 60 * 60)) % 24)
+        const minutes = Math.floor((diff / 1000 / 60) % 60)
+
+        setUptime(`${days}d ${hours}h ${minutes}m`)
+      }
+
+      updateUptime()
+      const uptimeInterval = setInterval(updateUptime, 60000) // 每分钟更新
+      return () => clearInterval(uptimeInterval)
+    }
+  }, [stats])
 
   const loadData = async () => {
     try {

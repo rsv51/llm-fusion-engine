@@ -28,6 +28,7 @@ export interface SystemStats {
   activeKeys: number
   requestsChange?: number
   providers?: ProviderStats[]
+  startTime: string
 }
 
 export interface ProviderStats {

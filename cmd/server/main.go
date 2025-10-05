@@ -9,11 +9,13 @@ import (
 	"log"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/gin-gonic/gin"
 )
 
 func main() {
+	startTime := time.Now()
 	fmt.Println("Initializing LLM Fusion Engine...")
 
 	// 1. Initialize Database
@@ -34,7 +36,7 @@ func main() {
 	chatHandler := v1.NewChatHandler(multiProviderService)
 	authHandler := admin.NewAuthHandler(db)
 	groupHandler := admin.NewGroupHandler(db)
-	statsHandler := admin.NewStatsHandler(db)
+	statsHandler := admin.NewStatsHandler(db, startTime)
 	keyHandler := admin.NewKeyHandler(db)
 	logHandler := admin.NewLogHandler(db)
 	exportHandler := admin.NewExportHandler(db)
