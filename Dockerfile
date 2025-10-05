@@ -3,7 +3,7 @@
 FROM node:18-slim AS frontend-builder
 
 # Create a non-root user with a valid home directory
-RUN addgroup --system appgroup && adduser --system --ingroup appgroup --home /home/appuser --create-home appuser
+RUN groupadd -r appgroup && useradd -r -g appgroup -d /home/appuser -m appuser
 
 # Set environment variables for the non-root user
 ENV HOME=/home/appuser
@@ -12,10 +12,14 @@ ENV PATH=$HOME/.npm-global/bin:$PATH
 # Set the working directory
 WORKDIR /app/web
 
+# Ensure workspace directory is owned by appuser for npm writes
+RUN mkdir -p /app/web && chown -R appuser:appgroup /app
+
+# Switch to the non-root user
+USER appuser
+
 # Copy package files and install dependencies
 COPY --chown=appuser:appgroup web/package*.json ./
-# Run install as the non-root user
-USER appuser
 RUN npm install
 
 # Copy the rest of the source code
