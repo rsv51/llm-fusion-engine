@@ -60,6 +60,7 @@ type Provider struct {
 	MaxRetries   int    `gorm:"default:3"`
 	HealthStatus string `gorm:"default:'unknown'"` // healthy/unhealthy/unknown
 	LastChecked  *time.Time
+	Latency      uint   // in milliseconds
 }
 
 // ApiKey stores an individual API key for a provider.

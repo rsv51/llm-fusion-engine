@@ -33,11 +33,17 @@ func (hc *HealthChecker) CheckProvider(providerID uint) (*database.Provider, err
 
 	now := time.Now()
 	provider.LastChecked = &now
+	provider.Latency = uint(latency.Milliseconds())
 
-	if err != nil || resp.StatusCode >= 400 {
+	if err != nil {
 		provider.HealthStatus = "unhealthy"
 	} else {
-		provider.HealthStatus = "healthy"
+		defer resp.Body.Close() // Ensure the response body is closed
+		if resp.StatusCode >= 400 {
+			provider.HealthStatus = "unhealthy"
+		} else {
+			provider.HealthStatus = "healthy"
+		}
 	}
 
 	// 更新数据库
