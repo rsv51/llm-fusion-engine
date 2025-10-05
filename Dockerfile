@@ -31,8 +31,14 @@ RUN npm run build
 # Stage 2: Build the backend
 FROM golang:1.21-alpine AS backend-builder
 WORKDIR /app
+# Copy go.mod and go.sum first to leverage Docker's layer caching.
+COPY go.mod go.sum ./
+RUN go mod download
+
+# Copy the rest of the source code
 COPY . .
-RUN go mod tidy
+
+# Build the Go application
 RUN CGO_ENABLED=0 GOOS=linux go build -o /app/llm-fusion-engine ./cmd/server/main.go
 
 # Stage 3: Create the final image
@@ -46,8 +52,9 @@ RUN addgroup -S appgroup && adduser -S appuser -G appgroup
 COPY --from=frontend-builder /app/web/dist ./web/dist
 COPY --from=backend-builder /app/llm-fusion-engine .
 
-# Set ownership for the entire app directory
-RUN chown -R appuser:appgroup /app
+# Create an empty database file and set ownership for the entire app directory
+# This ensures the app can write to the database file.
+RUN touch fusion.db && chown -R appuser:appgroup /app
 
 # Switch to the non-root user
 USER appuser
