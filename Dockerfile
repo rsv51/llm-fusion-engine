@@ -1,20 +1,26 @@
 # Stage 1: Build the frontend
 FROM node:18-alpine AS frontend-builder
+
+# Create a non-root user first
+RUN addgroup -S appgroup && adduser -S appuser -G appgroup
+
+# Create app directory and set permissions
+RUN mkdir -p /app/web && chown -R appuser:appgroup /app
+
+# Set the working directory
 WORKDIR /app/web
 
-# Create and switch to a non-root user to avoid permission issues
-RUN addgroup -S appgroup && adduser -S appuser -G appgroup
+# Switch to the non-root user
 USER appuser
 
-# Copy package files and install dependencies as the non-root user
-# Using --chown ensures the files are owned by the correct user
-COPY --chown=appuser:appgroup web/package*.json ./
+# Copy package files and install dependencies
+COPY web/package*.json ./
 RUN npm install
 
 # Copy the rest of the source code
-COPY --chown=appuser:appgroup web/ .
+COPY web/ .
 
-# Run the build script as the non-root user. This is the most reliable way.
+# Run the build script
 RUN npm run build
 
 # Stage 2: Build the backend
@@ -26,18 +32,17 @@ RUN CGO_ENABLED=0 GOOS=linux go build -o /app/server ./cmd/server/main.go
 
 # Stage 3: Create the final image
 FROM alpine:latest
-WORKDIR /app
-RUN apk --no-cache add ca-certificates
 
-# Create a non-root user for the final image for security
+# Create a non-root user for the final image
 RUN addgroup -S appgroup && adduser -S appuser -G appgroup
+
+# Create app directory and set permissions
+WORKDIR /app
+RUN chown -R appuser:appgroup /app
 
 # Copy built assets
 COPY --from=frontend-builder /app/web/dist ./web/dist
 COPY --from=backend-builder /app/server ./server
-
-# Set ownership for the entire app directory
-RUN chown -R appuser:appgroup /app
 
 # Switch to the non-root user
 USER appuser
