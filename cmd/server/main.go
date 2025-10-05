@@ -32,6 +32,8 @@ func main() {
 	chatHandler := v1.NewChatHandler(multiProviderService)
 	groupHandler := admin.NewGroupHandler(db)
 	statsHandler := admin.NewStatsHandler(db)
+	keyHandler := admin.NewKeyHandler(db)
+	logHandler := admin.NewLogHandler(db)
 
 	// 4. Setup Router
 	router := gin.Default()
@@ -50,12 +52,27 @@ func main() {
 	// Admin API for management
 	adminGroup := router.Group("/api/admin")
 	{
+		// Statistics
 		adminGroup.GET("/stats", statsHandler.GetStats)
+		
+		// Groups
 		adminGroup.POST("/groups", groupHandler.CreateGroup)
 		adminGroup.GET("/groups", groupHandler.GetGroups)
 		adminGroup.GET("/groups/:id", groupHandler.GetGroup)
 		adminGroup.PUT("/groups/:id", groupHandler.UpdateGroup)
 		adminGroup.DELETE("/groups/:id", groupHandler.DeleteGroup)
+		
+		// Keys
+		adminGroup.POST("/keys", keyHandler.CreateKey)
+		adminGroup.GET("/keys", keyHandler.GetKeys)
+		adminGroup.GET("/keys/:id", keyHandler.GetKey)
+		adminGroup.PUT("/keys/:id", keyHandler.UpdateKey)
+		adminGroup.DELETE("/keys/:id", keyHandler.DeleteKey)
+		
+		// Logs
+		adminGroup.GET("/logs", logHandler.GetLogs)
+		adminGroup.GET("/logs/:id", logHandler.GetLog)
+		adminGroup.DELETE("/logs", logHandler.DeleteLogs)
 	}
 	
 	// NoRoute handler for SPA routing

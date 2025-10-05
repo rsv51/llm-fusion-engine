@@ -1,7 +1,7 @@
 import React, { useState } from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { Sidebar, Header } from './components/layout'
-import { Dashboard, Groups, Keys } from './pages'
+import { Dashboard, Groups, Keys, Logs, Models, Settings } from './pages'
 
 export const App: React.FC = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false)
@@ -24,6 +24,9 @@ export const App: React.FC = () => {
               <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/groups" element={<Groups />} />
               <Route path="/keys" element={<Keys />} />
+              <Route path="/models" element={<Models />} />
+              <Route path="/logs" element={<Logs />} />
+              <Route path="/settings" element={<Settings />} />
               <Route path="*" element={<Navigate to="/dashboard" replace />} />
             </Routes>
           </main>

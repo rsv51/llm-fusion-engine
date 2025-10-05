@@ -16,7 +16,7 @@ interface SidebarProps {
 }
 
 const navigation = [
-  { name: '仪表盘', href: '/', icon: LayoutDashboard },
+  { name: '仪表盘', href: '/dashboard', icon: LayoutDashboard },
   { name: '分组管理', href: '/groups', icon: Users },
   { name: '密钥管理', href: '/keys', icon: Key },
   { name: '模型配置', href: '/models', icon: Box },
