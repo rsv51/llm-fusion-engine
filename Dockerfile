@@ -4,9 +4,11 @@ WORKDIR /app/web
 COPY web/package*.json ./
 # 安装所有依赖(包括 devDependencies)
 RUN npm install
+# 修复 node_modules 中二进制文件的执行权限
+RUN chmod -R +x node_modules/.bin
 COPY web/ .
-# 直接使用 node_modules 中的二进制文件,避免权限问题
-RUN ./node_modules/.bin/tsc && ./node_modules/.bin/vite build
+# 使用 npm scripts 执行构建,这是最可靠的方式
+RUN npm run build
 
 # Stage 2: Build the backend
 FROM golang:1.21-alpine AS backend-builder
