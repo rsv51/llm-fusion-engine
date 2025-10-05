@@ -1,27 +1,27 @@
 # Stage 1: Build the frontend
 FROM node:18-alpine AS frontend-builder
 WORKDIR /app/web
-COPY web/package*.json ./
-# 安装所有依赖(包括 devDependencies)
-RUN npm install
-# 修复 node_modules 中二进制文件的执行权限
-RUN chmod -R +x node_modules/.bin
-COPY web/ .
-# 使用 npm scripts 执行构建,这是最可靠的方式
+
+# Create and switch to a non-root user to avoid permission issues
+RUN addgroup -S appgroup && adduser -S appuser -G appgroup
+USER appuser
+
+# Copy package files and install dependencies as the non-root user
+# Using --chown ensures the files are owned by the correct user
+COPY --chown=appuser:appgroup web/package*.json ./
+RUN npm ci
+
+# Copy the rest of the source code
+COPY --chown=appuser:appgroup web/ .
+
+# Run the build script as the non-root user. This is the most reliable way.
 RUN npm run build
 
 # Stage 2: Build the backend
 FROM golang:1.21-alpine AS backend-builder
 WORKDIR /app
-# Copy all source code first, including go.mod
 COPY . .
-
-# Now that all source code is present, run go mod tidy to ensure
-# go.mod and go.sum are complete and in sync with the code.
 RUN go mod tidy
-
-# Build the application
-# The build command will now use the correctly generated go.sum
 RUN CGO_ENABLED=0 GOOS=linux go build -o /app/server ./cmd/server/main.go
 
 # Stage 3: Create the final image
@@ -29,15 +29,18 @@ FROM alpine:latest
 WORKDIR /app
 RUN apk --no-cache add ca-certificates
 
-# Copy the built frontend from the frontend-builder stage
-COPY --from=frontend-builder /app/web/dist ./web/dist
+# Create a non-root user for the final image for security
+RUN addgroup -S appgroup && adduser -S appuser -G appgroup
 
-# Copy the built backend from the backend-builder stage
+# Copy built assets
+COPY --from=frontend-builder /app/web/dist ./web/dist
 COPY --from=backend-builder /app/server ./server
 
-# The database file will be created by the application on first run.
-# For production, you should mount a volume to /app/fusion.db to persist data.
+# Set ownership for the entire app directory
+RUN chown -R appuser:appgroup /app
+
+# Switch to the non-root user
+USER appuser
 
 EXPOSE 8080
-
 CMD ["./server"]
