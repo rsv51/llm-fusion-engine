@@ -16,12 +16,22 @@ export const Providers: React.FC = () => {
   }, [])
 
   const loadProviders = async () => {
+    setError(null); // 清除之前的错误
     try {
       setLoading(true)
       const response = await api.get<PaginationResponse<Provider>>('/admin/providers')
-      setProviders(response.data.data)
-    } catch (error) {
+      console.log('Providers API Response:', response) // 添加日志
+      // 尝试安全地访问数据
+      if (response && response.data && Array.isArray(response.data.data)) {
+        setProviders(response.data.data);
+      } else {
+        const errorMsg = 'API 响应数据格式不正确: ' + JSON.stringify(response);
+        console.error(errorMsg);
+        setError(errorMsg);
+      }
+    } catch (error: any) {
       console.error('加载供应商失败:', error)
+      setError(error.message || JSON.stringify(error));
     } finally {
       setLoading(false)
     }
@@ -64,9 +74,15 @@ export const Providers: React.FC = () => {
     }
   }
 
-  const filteredProviders = providers.filter(provider =>
-    provider.providerType.toLowerCase().includes(searchQuery.toLowerCase())
-  )
+  let filteredProviders: Provider[] = []
+  try {
+    filteredProviders = providers.filter(provider =>
+      provider?.providerType?.toLowerCase().includes(searchQuery.toLowerCase())
+    )
+  } catch (error) {
+    console.error('Error filtering providers:', error, providers)
+    filteredProviders = []
+  }
 
   const handleCheckHealth = async (id: number) => {
     try {
@@ -77,8 +93,18 @@ export const Providers: React.FC = () => {
     }
   }
 
+  // 添加一个错误状态
+  const [error, setError] = useState<string | null>(null);
+
   return (
     <div className="space-y-6">
+      {/* 如果有错误，显示在页面上 */}
+      {error && (
+        <div style={{ color: 'red', border: '1px solid red', padding: '10px', backgroundColor: '#ffeeee' }}>
+          <h2>前端错误:</h2>
+          <pre>{error}</pre>
+        </div>
+      )}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">供应商管理</h1>

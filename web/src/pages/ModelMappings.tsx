@@ -10,22 +10,42 @@ export const ModelMappings: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingMapping, setEditingMapping] = useState<ModelMapping | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     loadData();
   }, []);
 
   const loadData = async () => {
+    setError(null); // 清除之前的错误
     try {
       setLoading(true);
       const [mappingsResponse, providersResponse] = await Promise.all([
         api.get<PaginationResponse<ModelMapping>>('/admin/model-mappings'),
         api.get<PaginationResponse<Provider>>('/admin/providers'),
       ]);
-      setMappings(mappingsResponse.data.data);
-      setProviders(providersResponse.data.data);
-    } catch (error) {
+      console.log('ModelMappings API Response:', mappingsResponse); // 添加日志
+      console.log('Providers API Response in ModelMappings:', providersResponse); // 添加日志
+
+      // 安全地检查和设置数据
+      if (mappingsResponse && mappingsResponse.data && Array.isArray(mappingsResponse.data.data)) {
+        setMappings(mappingsResponse.data.data);
+      } else {
+        const errorMsg = 'ModelMappings API 响应数据格式不正确: ' + JSON.stringify(mappingsResponse);
+        console.error(errorMsg);
+        setError(errorMsg);
+      }
+
+      if (providersResponse && providersResponse.data && Array.isArray(providersResponse.data.data)) {
+        setProviders(providersResponse.data.data);
+      } else {
+        const errorMsg = 'Providers API (in ModelMappings) 响应数据格式不正确: ' + JSON.stringify(providersResponse);
+        console.error(errorMsg);
+        setError(errorMsg);
+      }
+    } catch (error: any) {
       console.error('加载数据失败:', error);
+      setError(error.message || JSON.stringify(error));
     } finally {
       setLoading(false);
     }
@@ -67,6 +87,13 @@ export const ModelMappings: React.FC = () => {
 
   return (
     <div className="space-y-6">
+      {/* 如果有错误，显示在页面上 */}
+      {error && (
+        <div style={{ color: 'red', border: '1px solid red', padding: '10px', backgroundColor: '#ffeeee' }}>
+          <h2>前端错误:</h2>
+          <pre>{error}</pre>
+        </div>
+      )}
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">模型映射</h1>
         <Button onClick={handleCreate}><Plus className="w-4 h-4 mr-2" />新建映射</Button>
