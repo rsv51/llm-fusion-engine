@@ -5,8 +5,8 @@ COPY web/package*.json ./
 # 安装所有依赖(包括 devDependencies)
 RUN npm install
 COPY web/ .
-# 使用 npx 确保可以找到并执行 tsc 和 vite
-RUN npx tsc && npx vite build
+# 直接使用 node_modules 中的二进制文件,避免权限问题
+RUN ./node_modules/.bin/tsc && ./node_modules/.bin/vite build
 
 # Stage 2: Build the backend
 FROM golang:1.21-alpine AS backend-builder
