@@ -57,7 +57,7 @@ func (h *ModelMappingHandler) GetModelMappings(c *gin.Context) {
 		return
 	}
 
-	if err := h.db.Offset(offset).Limit(pageSize).Preload("Provider").Find(&mappings).Error; err != nil {
+	if err := h.db.Offset(offset).Limit(pageSize).Find(&mappings).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve model mappings"})
 		return
 	}
