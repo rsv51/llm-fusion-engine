@@ -1,13 +1,12 @@
 import React from 'react'
 import { NavLink } from 'react-router-dom'
-import { 
-  LayoutDashboard, 
-  Users, 
-  Key, 
-  Box, 
-  FileText, 
+import {
+  LayoutDashboard,
+  Users,
+  Key,
+  Box,
+  FileText,
   Settings,
-  Menu,
   X
 } from 'lucide-react'
 

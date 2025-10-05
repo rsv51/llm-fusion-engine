@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { Plus, Eye, EyeOff, Copy, Trash2, Search, Filter } from 'lucide-react'
+import { Plus, Eye, EyeOff, Copy, Trash2, Search } from 'lucide-react'
 import { Card, Button, Input, Modal, Badge } from '../components/ui'
 import { keysApi, groupsApi } from '../services'
 import type { ApiKey, Group, PaginationParams } from '../types'
