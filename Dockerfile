@@ -31,15 +31,8 @@ RUN npm run build
 # Stage 2: Build the backend
 FROM golang:1.21-alpine AS backend-builder
 WORKDIR /app
-# Copy go.mod first to leverage Docker's layer caching.
-COPY go.mod ./
-# This creates go.sum and ensures dependencies are clean before building.
-RUN go mod tidy
-
-# Copy the rest of the source code
 COPY . .
-
-# Build the Go application
+RUN go mod tidy
 RUN CGO_ENABLED=0 GOOS=linux go build -o /app/llm-fusion-engine ./cmd/server/main.go
 
 # Stage 3: Create the final image
