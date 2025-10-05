@@ -15,7 +15,7 @@ USER appuser
 
 # Copy package files and install dependencies
 COPY web/package*.json ./
-RUN npm install
+RUN npm install --cache .npm --prefer-offline
 
 # Copy the rest of the source code
 COPY web/ .
