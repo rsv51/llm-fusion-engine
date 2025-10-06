@@ -232,10 +232,19 @@ interface ProviderModalProps {
 }
 
 const ProviderModal: React.FC<ProviderModalProps> = ({ isOpen, onClose, onSubmit, provider }) => {
+  // 解析配置对象
+  const parseConfig = (configStr: string) => {
+    try {
+      return JSON.parse(configStr);
+    } catch {
+      return { baseUrl: '', timeout: 30, maxRetries: 3, enabled: true, apiKey: '' };
+    }
+  };
+
   const getDefaultFormData = (): Partial<CreateProviderRequest> => ({
     name: '',
     type: 'openai',
-    config: JSON.stringify({ baseUrl: '', timeout: 30, maxRetries: 3, enabled: true }, null, 2),
+    config: JSON.stringify({ baseUrl: '', timeout: 30, maxRetries: 3, enabled: true, apiKey: '' }, null, 2),
     enabled: true,
     weight: 1,
   });
@@ -256,22 +265,40 @@ const ProviderModal: React.FC<ProviderModalProps> = ({ isOpen, onClose, onSubmit
 
   const [formData, setFormData] = useState<Partial<CreateProviderRequest>>(getInitialFormData());
   const [configError, setConfigError] = useState<string | null>(null);
+  const [config, setConfig] = useState(parseConfig(formData.config || ''));
 
   useEffect(() => {
     setFormData(getInitialFormData());
     setConfigError(null);
+    setConfig(parseConfig(getInitialFormData().config || ''));
   }, [provider]);
 
-  const handleConfigChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    const configStr = e.target.value
-    setFormData({ ...formData, config: configStr })
+  // 当配置对象改变时，更新 JSON 字符串
+  useEffect(() => {
     try {
-      JSON.parse(configStr)
-      setConfigError(null)
+      const configStr = JSON.stringify(config, null, 2);
+      setFormData({ ...formData, config: configStr });
+      setConfigError(null);
     } catch (err) {
-      setConfigError("无效的 JSON 格式")
+      setConfigError("无效的配置格式");
     }
-  }
+  }, [config]);
+
+  const handleConfigChange = (field: string, value: string | number | boolean) => {
+    setConfig({ ...config, [field]: value });
+  };
+
+  const handleDirectConfigChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const configStr = e.target.value;
+    setFormData({ ...formData, config: configStr });
+    try {
+      const parsedConfig = JSON.parse(configStr);
+      setConfig(parsedConfig);
+      setConfigError(null);
+    } catch (err) {
+      setConfigError("无效的 JSON 格式");
+    }
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -309,18 +336,58 @@ const ProviderModal: React.FC<ProviderModalProps> = ({ isOpen, onClose, onSubmit
           </select>
         </div>
         <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">API 密钥</label>
+          <Input
+            type="password"
+            value={config.apiKey || ''}
+            onChange={(e) => handleConfigChange('apiKey', e.target.value)}
+            placeholder="输入 API 密钥"
+            className="w-full"
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">基础 URL</label>
+          <Input
+            value={config.baseUrl || ''}
+            onChange={(e) => handleConfigChange('baseUrl', e.target.value)}
+            placeholder="例如: https://api.openai.com/v1"
+            className="w-full"
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">超时时间 (秒)</label>
+          <Input
+            type="number"
+            value={config.timeout || 30}
+            onChange={(e) => handleConfigChange('timeout', parseInt(e.target.value) || 30)}
+            className="w-full"
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">最大重试次数</label>
+          <Input
+            type="number"
+            value={config.maxRetries || 3}
+            onChange={(e) => handleConfigChange('maxRetries', parseInt(e.target.value) || 3)}
+            className="w-full"
+          />
+        </div>
+        <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
-            配置 (JSON 格式)
+            高级配置 (JSON 格式)
             <Code className="w-4 h-4 inline ml-2" />
           </label>
           <textarea
             value={formData.config || ''}
-            onChange={handleConfigChange}
+            onChange={handleDirectConfigChange}
             placeholder={`例如:\n{\n  "baseUrl": "https://api.openai.com/v1",\n  "apiKey": "sk-...",\n  "timeout": 30\n}`}
-            rows={8}
+            rows={6}
             className="w-full p-2 border rounded font-mono text-sm"
           />
           {configError && <p className="text-red-500 text-sm">{configError}</p>}
+          <p className="text-xs text-gray-500 mt-1">
+            提示：您可以直接编辑上面的 JSON 配置，或者使用上方的表单字段。修改表单字段会自动更新此处的 JSON 配置。
+          </p>
         </div>
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">控制台地址 (可选)</label>
