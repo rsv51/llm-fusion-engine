@@ -77,25 +77,10 @@ func (s *MultiProviderService) ProcessChatCompletionHttpAsync(
 	}
 
 	// 5. Construct the full API endpoint URL
-	// Construct the full API endpoint URL based on the provider type
-	var apiEndpoint string
-	providerType := strings.ToLower(provider.Type)
-
-	switch providerType {
-	case "openai", "azure", "openrouter", "groq", "deepseek":
-		// For OpenAI-compatible providers, append the standard path if the baseUrl is a root domain
-		apiEndpoint = baseUrl
-		parsedUrl, err := url.Parse(apiEndpoint)
-		if err == nil && (parsedUrl.Path == "" || parsedUrl.Path == "/") {
-			if !strings.HasSuffix(apiEndpoint, "/") {
-				apiEndpoint += "/"
-			}
-			apiEndpoint += "v1/chat/completions"
-		}
-	default:
-		// For any other provider type, or if the type is not set,
-		// assume the baseUrl is the full, final API endpoint.
-		apiEndpoint = baseUrl
+	// 5. Construct the full API endpoint URL using an adapter-like pattern
+	apiEndpoint, err := getRequestURL(provider.Type, baseUrl)
+	if err != nil {
+		return nil, err
 	}
 
 	// 6. Create request body
@@ -117,4 +102,29 @@ func (s *MultiProviderService) ProcessChatCompletionHttpAsync(
 	// 9. Execute the request
 	client := &http.Client{}
 	return client.Do(req)
+}
+
+// getRequestURL acts as an adapter to get the correct API endpoint for different provider types.
+func getRequestURL(providerType, baseUrl string) (string, error) {
+	if baseUrl == "" {
+		return "", errors.New("baseUrl is not configured for the provider")
+	}
+
+	// Ensure baseUrl doesn't have a trailing slash for consistency
+	baseUrl = strings.TrimSuffix(baseUrl, "/")
+
+	switch strings.ToLower(providerType) {
+	case "openai", "azure", "openrouter", "groq", "deepseek", "openchat", "fireworks", "mistral":
+		return baseUrl + "/v1/chat/completions", nil
+	case "anthropic":
+		return baseUrl + "/v1/messages", nil
+	case "gemini":
+		// Note: Gemini's path depends on the model, which we don't have here.
+		// This is a simplification. A real Gemini adapter would be more complex.
+		return baseUrl + "/v1beta/models/gemini-pro:generateContent", nil
+	default:
+		// For unknown or custom types, assume the baseUrl is the complete and final URL.
+		// This is the key to supporting arbitrary endpoints like the user's clawcloudrun URL.
+		return baseUrl, nil
+	}
 }
