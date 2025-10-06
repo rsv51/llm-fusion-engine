@@ -37,6 +37,9 @@ func (h *ExportHandler) ExportTemplate(c *gin.Context) {
 		}
 	}()
 
+	// Delete default Sheet1
+	f.DeleteSheet("Sheet1")
+	
 	// Create Providers sheet
 	h.createProvidersSheet(f, withSample)
 	
@@ -84,6 +87,9 @@ func (h *ExportHandler) exportToExcel(c *gin.Context) {
 	h.db.Find(&models)
 	h.db.Preload("Provider").Preload("Model").Find(&modelProviderMappings)
 
+	// Delete default Sheet1
+	f.DeleteSheet("Sheet1")
+	
 	// Create sheets with actual data
 	h.createProvidersSheetWithData(f, providers)
 	h.createModelsSheetWithData(f, models)
