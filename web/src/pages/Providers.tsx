@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react'
-import { Plus, Edit2, Trash2, Search, Zap, Code } from 'lucide-react' // Added Code icon for config
+import { Plus, Edit2, Trash2, Search, Zap, Code, Copy, List, Download } from 'lucide-react' // Added icons for new features
 import { Card, Button, Input, Modal, Badge } from '../components/ui'
 import { api } from '../services'
 import type { Provider, PaginationResponse, CreateProviderRequest } from '../types'
+import { modelsApi } from '../services/models'
 
 export const Providers: React.FC = () => {
   const [providers, setProviders] = useState<Provider[]>([])
@@ -11,6 +12,10 @@ export const Providers: React.FC = () => {
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [editingProvider, setEditingProvider] = useState<Provider | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [providerModels, setProviderModels] = useState<{providerId: number, models: string[], providerName: string} | null>(null)
+  const [isModelsModalOpen, setIsModelsModalOpen] = useState(false)
+  const [selectedProvider, setSelectedProvider] = useState<Provider | null>(null)
+  const [importing, setImporting] = useState(false)
 
   useEffect(() => {
     loadProviders()
@@ -20,14 +25,14 @@ export const Providers: React.FC = () => {
     setError(null); // 清除之前的错误
     try {
       setLoading(true)
-      // api.get() 已经返回了 response.data，所以 response 就是 PaginationResponse<Provider>
-      const paginationResponse = await api.get<PaginationResponse<Provider>>('/admin/providers')
-      console.log('Providers API Response:', paginationResponse) // 添加日志
-      // 尝试安全地访问数据
-      if (paginationResponse && Array.isArray(paginationResponse.data)) {
-        setProviders(paginationResponse.data);
+      // api.get() 已经返回了 response.data，所以 response 就是后端返回的完整响应
+      const response = await api.get<any>('/admin/providers')
+      console.log('Providers API Response:', response) // 添加日志
+      // 尝试安全地访问数据，后端返回格式为 { data: [...], pagination: {...} }
+      if (response && Array.isArray(response.data)) {
+        setProviders(response.data);
       } else {
-        const errorMsg = 'API 响应数据格式不正确: ' + JSON.stringify(paginationResponse);
+        const errorMsg = 'API 响应数据格式不正确: ' + JSON.stringify(response);
         console.error(errorMsg);
         setError(errorMsg);
       }
@@ -92,6 +97,59 @@ export const Providers: React.FC = () => {
       await loadProviders()
     } catch (error) {
       console.error('健康检查失败:', error)
+    }
+  }
+
+  const handleGetModels = async (provider: Provider) => {
+    try {
+      setSelectedProvider(provider)
+      const response = await modelsApi.getProviderModels(provider.id)
+      setProviderModels({
+        providerId: provider.id,
+        models: response.models,
+        providerName: response.providerName
+      })
+      setIsModelsModalOpen(true)
+    } catch (error) {
+      console.error('获取模型列表失败:', error)
+      alert('获取模型列表失败，请重试')
+    }
+  }
+
+  const handleImportAllModels = async () => {
+    if (!providerModels || !selectedProvider) return
+    
+    try {
+      setImporting(true)
+      await modelsApi.importModels({
+        providerId: providerModels.providerId,
+        modelNames: providerModels.models
+      })
+      alert('所有模型导入成功')
+      setIsModelsModalOpen(false)
+    } catch (error) {
+      console.error('导入模型失败:', error)
+      alert('导入模型失败，请重试')
+    } finally {
+      setImporting(false)
+    }
+  }
+
+  const handleImportSingleModel = async (modelName: string) => {
+    if (!selectedProvider) return
+    
+    try {
+      setImporting(true)
+      await modelsApi.importModels({
+        providerId: selectedProvider.id,
+        modelNames: [modelName]
+      })
+      alert(`模型 ${modelName} 导入成功`)
+    } catch (error) {
+      console.error('导入模型失败:', error)
+      alert('导入模型失败，请重试')
+    } finally {
+      setImporting(false)
     }
   }
 
@@ -190,6 +248,15 @@ export const Providers: React.FC = () => {
                       <Button
                         variant="secondary"
                         size="sm"
+                        onClick={() => handleGetModels(provider)}
+                        className="flex-1"
+                      >
+                        <List className="w-4 h-4 mr-1" />
+                        模型
+                      </Button>
+                      <Button
+                        variant="secondary"
+                        size="sm"
                         onClick={() => handleEdit(provider)}
                       >
                         <Edit2 className="w-4 h-4" />
@@ -219,6 +286,15 @@ export const Providers: React.FC = () => {
         onClose={() => setIsModalOpen(false)}
         onSubmit={handleSubmit}
         provider={editingProvider}
+      />
+
+      <ProviderModelsModal
+        isOpen={isModelsModalOpen}
+        onClose={() => setIsModelsModalOpen(false)}
+        providerModels={providerModels}
+        onImportAll={handleImportAllModels}
+        onImportSingle={handleImportSingleModel}
+        importing={importing}
       />
     </div>
   )
@@ -424,6 +500,82 @@ const ProviderModal: React.FC<ProviderModalProps> = ({ isOpen, onClose, onSubmit
           </Button>
         </div>
       </form>
+    </Modal>
+  )
+}
+
+interface ProviderModelsModalProps {
+  isOpen: boolean
+  onClose: () => void
+  providerModels: {providerId: number, models: string[], providerName: string} | null
+  onImportAll: () => void
+  onImportSingle: (modelName: string) => void
+  importing: boolean
+}
+
+const ProviderModelsModal: React.FC<ProviderModelsModalProps> = ({
+  isOpen,
+  onClose,
+  providerModels,
+  onImportAll,
+  onImportSingle,
+  importing
+}) => {
+  if (!providerModels) return null
+
+  return (
+    <Modal isOpen={isOpen} onClose={onClose} title={`${providerModels.providerName} - 模型列表`}>
+      <div className="space-y-4">
+        <div>
+          <p className="text-sm text-gray-500 mb-2">
+            找到 {providerModels.models.length} 个可用模型
+          </p>
+          <div className="max-h-60 overflow-y-auto border rounded-lg">
+            <table className="w-full">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-4 py-2 text-left text-sm font-medium text-gray-700">模型名称</th>
+                  <th className="px-4 py-2 text-right text-sm font-medium text-gray-700">操作</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-200">
+                {providerModels.models.map((model, index) => (
+                  <tr key={index}>
+                    <td className="px-4 py-2 text-sm text-gray-900">{model}</td>
+                    <td className="px-4 py-2 text-right">
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        onClick={() => onImportSingle(model)}
+                        disabled={importing}
+                      >
+                        <Copy className="w-4 h-4 mr-1" />
+                        复制
+                      </Button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+        
+        <div className="flex justify-between pt-4 border-t border-gray-100">
+          <Button
+            variant="secondary"
+            onClick={onClose}
+          >
+            取消
+          </Button>
+          <Button
+            onClick={onImportAll}
+            disabled={importing}
+          >
+            <Download className="w-4 h-4 mr-2" />
+            {importing ? '导入中...' : '一键复制所有模型'}
+          </Button>
+        </div>
+      </div>
     </Modal>
   )
 }

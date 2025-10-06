@@ -23,36 +23,36 @@ export const ModelMappings: React.FC = () => {
     try {
       setLoading(true);
       // api.get() 已经返回了 response.data
-      const [mappingsPaginationResponse, modelsPaginationResponse, providersPaginationResponse] = await Promise.all([
-        api.get<PaginationResponse<ModelProviderMapping>>('/admin/model-provider-mappings'),
-        api.get<PaginationResponse<Model>>('/admin/models'),
-        api.get<PaginationResponse<Provider>>('/admin/providers'),
+      const [mappingsResponse, modelsResponse, providersResponse] = await Promise.all([
+        api.get<any>('/admin/model-provider-mappings'),
+        api.get<any>('/admin/models'),
+        api.get<any>('/admin/providers'),
       ]);
-      console.log('ModelProviderMappings API Response:', mappingsPaginationResponse); // 添加日志
-      console.log('Models API Response:', modelsPaginationResponse); // 添加日志
-      console.log('Providers API Response in ModelMappings:', providersPaginationResponse); // 添加日志
+      console.log('ModelProviderMappings API Response:', mappingsResponse); // 添加日志
+      console.log('Models API Response:', modelsResponse); // 添加日志
+      console.log('Providers API Response in ModelMappings:', providersResponse); // 添加日志
 
       // 安全地检查和设置数据
-      if (mappingsPaginationResponse && Array.isArray(mappingsPaginationResponse.data)) {
-        setMappings(mappingsPaginationResponse.data);
+      if (mappingsResponse && Array.isArray(mappingsResponse.data)) {
+        setMappings(mappingsResponse.data);
       } else {
-        const errorMsg = 'ModelProviderMappings API 响应数据格式不正确: ' + JSON.stringify(mappingsPaginationResponse);
+        const errorMsg = 'ModelProviderMappings API 响应数据格式不正确: ' + JSON.stringify(mappingsResponse);
         console.error(errorMsg);
         setError(errorMsg);
       }
 
-      if (modelsPaginationResponse && Array.isArray(modelsPaginationResponse.data)) {
-        setModels(modelsPaginationResponse.data);
+      if (modelsResponse && Array.isArray(modelsResponse.data)) {
+        setModels(modelsResponse.data);
       } else {
-        const errorMsg = 'Models API 响应数据格式不正确: ' + JSON.stringify(modelsPaginationResponse);
+        const errorMsg = 'Models API 响应数据格式不正确: ' + JSON.stringify(modelsResponse);
         console.error(errorMsg);
         setError(errorMsg);
       }
 
-      if (providersPaginationResponse && Array.isArray(providersPaginationResponse.data)) {
-        setProviders(providersPaginationResponse.data);
+      if (providersResponse && Array.isArray(providersResponse.data)) {
+        setProviders(providersResponse.data);
       } else {
-        const errorMsg = 'Providers API (in ModelMappings) 响应数据格式不正确: ' + JSON.stringify(providersPaginationResponse);
+        const errorMsg = 'Providers API (in ModelMappings) 响应数据格式不正确: ' + JSON.stringify(providersResponse);
         console.error(errorMsg);
         setError(errorMsg);
       }

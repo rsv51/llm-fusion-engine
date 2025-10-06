@@ -115,3 +115,81 @@ func (h *ProviderHandler) DeleteProvider(c *gin.Context) {
 	}
 	c.JSON(http.StatusOK, gin.H{"message": "Provider deleted successfully"})
 }
+
+// GetProviderModels retrieves available models for a specific provider.
+func (h *ProviderHandler) GetProviderModels(c *gin.Context) {
+	id := c.Param("id")
+	
+	// Check if provider exists
+	var provider database.Provider
+	if err := h.db.First(&provider, id).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Provider not found"})
+		return
+	}
+	
+	// For now, return a mock list of models based on provider type
+	// In a real implementation, this would query the provider's API
+	var models []string
+	switch provider.Type {
+	case "openai":
+		models = []string{"gpt-4", "gpt-4-turbo", "gpt-3.5-turbo", "gpt-3.5-turbo-16k"}
+	case "anthropic":
+		models = []string{"claude-3-opus", "claude-3-sonnet", "claude-3-haiku"}
+	case "gemini":
+		models = []string{"gemini-pro", "gemini-pro-vision"}
+	default:
+		models = []string{"default-model"}
+	}
+	
+	c.JSON(http.StatusOK, gin.H{
+		"models":       models,
+		"providerName": provider.Name,
+	})
+}
+
+// ImportProviderModels imports models for a specific provider.
+func (h *ProviderHandler) ImportProviderModels(c *gin.Context) {
+	id := c.Param("id")
+	
+	// Check if provider exists
+	var provider database.Provider
+	if err := h.db.First(&provider, id).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Provider not found"})
+		return
+	}
+	
+	var req struct {
+		ModelNames []string `json:"modelNames"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	
+	// Create models if they don't exist
+	var createdCount int
+	for _, modelName := range req.ModelNames {
+		var existingModel database.Model
+		if err := h.db.Where("name = ?", modelName).First(&existingModel).Error; err != nil {
+			// Model doesn't exist, create it
+			newModel := database.Model{
+				Name:     modelName,
+				Remark:   fmt.Sprintf("Imported from %s", provider.Name),
+				MaxRetry: 3,
+				Timeout:  30,
+				Enabled:  true,
+			}
+			if err := h.db.Create(&newModel).Error; err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("Failed to create model %s", modelName)})
+				return
+			}
+			createdCount++
+		}
+	}
+	
+	c.JSON(http.StatusOK, gin.H{
+		"success":       true,
+		"message":       "Models imported successfully",
+		"importedCount": createdCount,
+	})
+}

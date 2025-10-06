@@ -139,6 +139,8 @@ func main() {
 		adminGroup.GET("/providers/:id", providerHandler.GetProvider)
 		adminGroup.PUT("/providers/:id", providerHandler.UpdateProvider)
 		adminGroup.DELETE("/providers/:id", providerHandler.DeleteProvider)
+		adminGroup.GET("/providers/:id/models", providerHandler.GetProviderModels)
+		adminGroup.POST("/providers/:id/models/import", providerHandler.ImportProviderModels)
 
 		// Models
 		adminGroup.POST("/models", modelHandler.CreateModel)

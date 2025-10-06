@@ -23,9 +23,19 @@ export const Models: React.FC = () => {
       const response = await api.get('/admin/models', {
         params: { page: pageNum, pageSize: 12, search: searchQuery }
       }) as any;
-      setModels(response.items)
-      setPage(response.page)
-      setTotalPages(response.totalPages)
+      console.log('Models API Response:', response); // 添加日志
+      // 后端返回格式为 { data: [...], pagination: {...} } 或 { items: [...], page: ..., totalPages: ... }
+      if (response.data && Array.isArray(response.data)) {
+        setModels(response.data)
+        setPage(response.pagination?.page || 1)
+        setTotalPages(response.pagination?.totalPage || 1)
+      } else if (response.items && Array.isArray(response.items)) {
+        setModels(response.items)
+        setPage(response.page || 1)
+        setTotalPages(response.totalPages || 1)
+      } else {
+        console.error('Models API 响应数据格式不正确:', response);
+      }
     } catch (error) {
       console.error('加载模型失败:', error)
     } finally {
