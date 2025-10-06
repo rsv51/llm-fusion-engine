@@ -29,6 +29,10 @@ api.interceptors.request.use(
 // 响应拦截器 - 统一错误处理
 api.interceptors.response.use(
   (response) => {
+    // 对于blob类型响应,返回完整的response对象
+    if (response.config.responseType === 'blob') {
+      return response
+    }
     return response.data
   },
   (error: AxiosError) => {
