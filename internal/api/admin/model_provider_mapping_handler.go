@@ -230,3 +230,86 @@ func (h *ModelProviderMappingHandler) DeleteModelProviderMapping(c *gin.Context)
 	}
 	c.JSON(http.StatusOK, gin.H{"message": "Model provider mapping deleted successfully"})
 }
+
+// GetMappingHealthStatus retrieves the recent health status for a model-provider mapping.
+func (h *ModelProviderMappingHandler) GetMappingHealthStatus(c *gin.Context) {
+	id := c.Param("id")
+	
+	var mapping database.ModelProviderMapping
+	if err := h.db.First(&mapping, id).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Model provider mapping not found"})
+		return
+	}
+
+	// Get the last 10 request logs for this mapping
+	var logs []database.RequestLog
+	err := h.db.Where("provider_id = ? AND model = ?", mapping.ProviderID, mapping.ProviderModel).
+		Order("created_at DESC").
+		Limit(10).
+		Find(&logs).Error
+	
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve health status"})
+		return
+	}
+
+	// Process logs to create health status array
+	healthStatus := make([]gin.H, 0, len(logs))
+	for _, log := range logs {
+		status := "success"
+		if log.StatusCode >= 400 {
+			status = "error"
+		}
+		healthStatus = append(healthStatus, gin.H{
+			"timestamp":  log.CreatedAt,
+			"status":     status,
+			"statusCode": log.StatusCode,
+			"latencyMs":  log.LatencyMs,
+		})
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"mappingId":    mapping.ID,
+		"healthStatus": healthStatus,
+	})
+}
+
+// GetAllMappingsHealthStatus retrieves health status for all mappings.
+func (h *ModelProviderMappingHandler) GetAllMappingsHealthStatus(c *gin.Context) {
+	var mappings []database.ModelProviderMapping
+	if err := h.db.Find(&mappings).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve mappings"})
+		return
+	}
+
+	result := make(map[uint][]gin.H)
+	
+	for _, mapping := range mappings {
+		var logs []database.RequestLog
+		err := h.db.Where("provider_id = ? AND model = ?", mapping.ProviderID, mapping.ProviderModel).
+			Order("created_at DESC").
+			Limit(10).
+			Find(&logs).Error
+		
+		if err != nil {
+			continue
+		}
+
+		healthStatus := make([]gin.H, 0, len(logs))
+		for _, log := range logs {
+			status := "success"
+			if log.StatusCode >= 400 {
+				status = "error"
+			}
+			healthStatus = append(healthStatus, gin.H{
+				"timestamp":  log.CreatedAt,
+				"status":     status,
+				"statusCode": log.StatusCode,
+			})
+		}
+		
+		result[mapping.ID] = healthStatus
+	}
+
+	c.JSON(http.StatusOK, result)
+}

@@ -16,9 +16,11 @@ export const ModelMappings: React.FC = () => {
   const [selectedProviderId, setSelectedProviderId] = useState<number | ''>('');
   const [providerModels, setProviderModels] = useState<string[]>([]);
   const [loadingProviderModels, setLoadingProviderModels] = useState(false);
+  const [healthStatusData, setHealthStatusData] = useState<Record<number, any[]>>({});
 
   useEffect(() => {
     loadData();
+    loadHealthStatus();
   }, []);
 
   // 统一提取列表数据,兼容多种后端返回格式:
@@ -80,6 +82,15 @@ export const ModelMappings: React.FC = () => {
       setError(error.message || JSON.stringify(error));
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadHealthStatus = async () => {
+    try {
+      const response = await api.get<Record<number, any[]>>('/admin/model-provider-mappings/health/all');
+      setHealthStatusData(response.data || response);
+    } catch (error) {
+      console.error('加载健康状态失败:', error);
     }
   };
 
@@ -175,6 +186,7 @@ export const ModelMappings: React.FC = () => {
                       <th className="px-4 py-3 text-left text-sm font-medium text-gray-700">提供商</th>
                       <th className="px-4 py-3 text-left text-sm font-medium text-gray-700">功能</th>
                       <th className="px-4 py-3 text-left text-sm font-medium text-gray-700">权重</th>
+                      <th className="px-4 py-3 text-left text-sm font-medium text-gray-700">健康状态</th>
                       <th className="px-4 py-3 text-left text-sm font-medium text-gray-700">状态</th>
                       <th className="px-4 py-3 text-right text-sm font-medium text-gray-700">操作</th>
                     </tr>
@@ -200,6 +212,9 @@ export const ModelMappings: React.FC = () => {
                         </td>
                         <td className="px-4 py-3">
                           <div className="text-sm text-gray-900">{mapping.weight}</div>
+                        </td>
+                        <td className="px-4 py-3">
+                          <HealthStatusIndicator healthStatus={healthStatusData[mapping.id] || []} />
                         </td>
                         <td className="px-4 py-3">
                           <Badge variant={mapping.enabled ? 'success' : 'default'}>
@@ -442,6 +457,42 @@ const ModelSelector: React.FC<{
           )}
         </div>
       </div>
+    </div>
+  );
+};
+
+// 健康状态指示器组件
+interface HealthStatusIndicatorProps {
+  healthStatus: Array<{
+    timestamp: string;
+    status: 'success' | 'error';
+    statusCode: number;
+    latencyMs?: number;
+  }>;
+}
+
+const HealthStatusIndicator: React.FC<HealthStatusIndicatorProps> = ({ healthStatus }) => {
+  if (!healthStatus || healthStatus.length === 0) {
+    return (
+      <div className="flex items-center gap-1">
+        <div className="text-xs text-gray-400">暂无数据</div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex items-center gap-1" title="近期10次调用状态(最新→最旧)">
+      {healthStatus.slice(0, 10).map((status, index) => (
+        <div
+          key={index}
+          className={`w-3 h-3 rounded-full ${
+            status.status === 'success'
+              ? 'bg-green-500'
+              : 'bg-red-500'
+          }`}
+          title={`${status.status === 'success' ? '成功' : '失败'} (${status.statusCode})${status.latencyMs ? ` - ${status.latencyMs}ms` : ''}\n${new Date(status.timestamp).toLocaleString()}`}
+        />
+      ))}
     </div>
   );
 };

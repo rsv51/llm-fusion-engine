@@ -112,6 +112,8 @@ func main() {
 		adminGroup.GET("/model-provider-mappings/:id", modelProviderMappingHandler.GetModelProviderMapping)
 		adminGroup.PUT("/model-provider-mappings/:id", modelProviderMappingHandler.UpdateModelProviderMapping)
 		adminGroup.DELETE("/model-provider-mappings/:id", modelProviderMappingHandler.DeleteModelProviderMapping)
+		adminGroup.GET("/model-provider-mappings/:id/health", modelProviderMappingHandler.GetMappingHealthStatus)
+		adminGroup.GET("/model-provider-mappings/health/all", modelProviderMappingHandler.GetAllMappingsHealthStatus)
 
 		// Keys
 		adminGroup.POST("/keys", keyHandler.CreateKey)
