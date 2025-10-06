@@ -44,11 +44,23 @@ func (r *TransparentStreamingActionResult) ExecuteResultAsync(c *gin.Context) {
 	c.Status(r.Response.StatusCode)
 
 	// Stream the body
+	// Use a buffer to read from the response body chunk by chunk
+	buffer := make([]byte, 4096) // 4KB buffer
 	c.Stream(func(w io.Writer) bool {
-		// Copy a chunk of data from the downstream response to the client
-		_, err := io.Copy(w, r.Response.Body)
-		// If err is not nil, it means the stream has ended or an error occurred.
-		// In either case, we should stop streaming.
-		return err == nil
+		n, err := r.Response.Body.Read(buffer)
+		if n > 0 {
+			if _, writeErr := w.Write(buffer[:n]); writeErr != nil {
+				// Error writing to client, stop streaming
+				return false
+			}
+		}
+
+		if err != nil {
+			// If EOF or any other error, stop streaming
+			return false
+		}
+
+		// Continue streaming
+		return true
 	})
 }
