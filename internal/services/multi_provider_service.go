@@ -54,9 +54,9 @@ func (s *MultiProviderService) ProcessChatCompletionHttpAsync(
 		return nil, errors.New("no providers available")
 	}
 	
-	// For now, use the first provider's type
+	// For now, we'll just use the first provider's type for logging
 	// TODO: Implement proper provider selection logic based on the group
-	providerType := providers[0].Type
+	_ = providers[0].Type // Assign to blank identifier to avoid "declared and not used" error
 	// TODO: Use provider factory when implementing actual provider logic
 	// provider, err := s.providerFactory.GetProvider(providerType)
 	// if err != nil {
