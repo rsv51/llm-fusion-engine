@@ -157,11 +157,9 @@ func main() {
 
 		// User account management
 		adminGroup.PUT("/account/profile", authHandler.UpdateProfile)
-	}
-	
-	// Excel Import/Export
-	adminGroup.GET("/export/excel", excelHandler.ExportToExcel)
-	adminGroup.POST("/import/excel", excelHandler.ImportFromExcel)
+		// Excel Import/Export
+		adminGroup.GET("/export/excel", excelHandler.ExportToExcel)
+		adminGroup.POST("/import/excel", excelHandler.ImportFromExcel)
 	}
 	
 	// NoRoute handler for SPA routing
