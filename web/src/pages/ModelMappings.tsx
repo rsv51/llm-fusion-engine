@@ -45,6 +45,8 @@ export const ModelMappings: React.FC = () => {
         setModels(modelsResponse.data);
       } else if (modelsResponse && modelsResponse.data && Array.isArray(modelsResponse.data.items)) {
         setModels(modelsResponse.data.items);
+      } else if (modelsResponse && modelsResponse.data && modelsResponse.data.items && Array.isArray(modelsResponse.data.items)) {
+        setModels(modelsResponse.data.items);
       } else {
         const errorMsg = 'Models API 响应数据格式不正确: ' + JSON.stringify(modelsResponse);
         console.error(errorMsg);
@@ -54,6 +56,8 @@ export const ModelMappings: React.FC = () => {
       if (providersResponse && Array.isArray(providersResponse.data)) {
         setProviders(providersResponse.data);
       } else if (providersResponse && providersResponse.data && Array.isArray(providersResponse.data.items)) {
+        setProviders(providersResponse.data.items);
+      } else if (providersResponse && providersResponse.data && providersResponse.data.items && Array.isArray(providersResponse.data.items)) {
         setProviders(providersResponse.data.items);
       } else {
         const errorMsg = 'Providers API (in ModelMappings) 响应数据格式不正确: ' + JSON.stringify(providersResponse);
