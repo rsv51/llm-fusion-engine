@@ -110,14 +110,39 @@ func (h *ProviderHandler) UpdateProvider(c *gin.Context) {
 	c.JSON(http.StatusOK, provider)
 }
 
-// DeleteProvider deletes a provider.
+// DeleteProvider deletes a provider and its associated model mappings.
 func (h *ProviderHandler) DeleteProvider(c *gin.Context) {
 	id := c.Param("id")
-	if err := h.db.Delete(&database.Provider{}, id).Error; err != nil {
+	
+	// Start a transaction to ensure both operations succeed or fail together
+	tx := h.db.Begin()
+	defer func() {
+		if r := recover(); r != nil {
+			tx.Rollback()
+		}
+	}()
+	
+	// First delete all associated ModelProviderMappings
+	if err := tx.Where("provider_id = ?", id).Delete(&database.ModelProviderMapping{}).Error; err != nil {
+		tx.Rollback()
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete associated model mappings"})
+		return
+	}
+	
+	// Then delete the provider
+	if err := tx.Delete(&database.Provider{}, id).Error; err != nil {
+		tx.Rollback()
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete provider"})
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"message": "Provider deleted successfully"})
+	
+	// Commit the transaction
+	if err := tx.Commit().Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to commit transaction"})
+		return
+	}
+	
+	c.JSON(http.StatusOK, gin.H{"message": "Provider and associated model mappings deleted successfully"})
 }
 
 // GetProviderModels retrieves available models for a specific provider.
