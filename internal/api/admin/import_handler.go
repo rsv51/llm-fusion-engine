@@ -188,10 +188,10 @@ func (h *ImportHandler) processExcelImport(f *excelize.File) gin.H {
 	result := gin.H{
 		"filename": "",
 		"result": gin.H{
-			"providers":    gin.H{"total": 0, "imported": 0, "skipped": 0, "errors": []interface{}{}},
-			"models":      gin.H{"total": 0, "imported": 0, "skipped": 0, "errors": []interface{}{}},
-			"associations": gin.H{"total": 0, "imported": 0, "skipped": 0, "errors": []interface{}{}},
-			"summary":     gin.H{"total_imported": 0, "total_skipped": 0, "total_errors": 0},
+			"providers":              gin.H{"total": 0, "imported": 0, "skipped": 0, "errors": []interface{}{}},
+			"models":                 gin.H{"total": 0, "imported": 0, "skipped": 0, "errors": []interface{}{}},
+			"modelProviderMappings":  gin.H{"total": 0, "imported": 0, "skipped": 0, "errors": []interface{}{}},
+			"summary":                gin.H{"total_imported": 0, "total_skipped": 0, "total_errors": 0},
 		},
 	}
 
@@ -221,12 +221,12 @@ func (h *ImportHandler) processExcelImport(f *excelize.File) gin.H {
 	// Calculate summary
 	providersResult := result["result"].(gin.H)["providers"].(gin.H)
 	modelsResult := result["result"].(gin.H)["models"].(gin.H)
-	associationsResult := result["result"].(gin.H)["associations"].(gin.H)
+	modelProviderMappingsResult := result["result"].(gin.H)["modelProviderMappings"].(gin.H)
 	
 	summary := result["result"].(gin.H)["summary"].(gin.H)
-	summary["total_imported"] = providersResult["imported"].(int) + modelsResult["imported"].(int) + associationsResult["imported"].(int)
-	summary["total_skipped"] = providersResult["skipped"].(int) + modelsResult["skipped"].(int) + associationsResult["skipped"].(int)
-	summary["total_errors"] = len(providersResult["errors"].([]interface{})) + len(modelsResult["errors"].([]interface{})) + len(associationsResult["errors"].([]interface{}))
+	summary["total_imported"] = providersResult["imported"].(int) + modelsResult["imported"].(int) + modelProviderMappingsResult["imported"].(int)
+	summary["total_skipped"] = providersResult["skipped"].(int) + modelsResult["skipped"].(int) + modelProviderMappingsResult["skipped"].(int)
+	summary["total_errors"] = len(providersResult["errors"].([]interface{})) + len(modelsResult["errors"].([]interface{})) + len(modelProviderMappingsResult["errors"].([]interface{}))
 
 	return result
 }
@@ -389,7 +389,7 @@ func (h *ImportHandler) processModelProviderMappingsSheet(f *excelize.File, shee
 		return
 	}
 
-	associationsResult := result["result"].(gin.H)["associations"].(gin.H)
+	modelProviderMappingsResult := result["result"].(gin.H)["modelProviderMappings"].(gin.H)
 	headers := rows[0]
 
 	// Find column indices
@@ -403,7 +403,7 @@ func (h *ImportHandler) processModelProviderMappingsSheet(f *excelize.File, shee
 	enabledIdx := findColumnIndex(headers, "enabled")
 
 	if modelNameIdx == -1 || providerNameIdx == -1 || providerModelIdx == -1 {
-		associationsResult["errors"] = append(associationsResult["errors"].([]interface{}), gin.H{"row": 1, "field": "headers", "error": "Required columns (ModelName, ProviderName, ProviderModel) not found"})
+		modelProviderMappingsResult["errors"] = append(modelProviderMappingsResult["errors"].([]interface{}), gin.H{"row": 1, "field": "headers", "error": "Required columns (ModelName, ProviderName, ProviderModel) not found"})
 		return
 	}
 
@@ -414,26 +414,26 @@ func (h *ImportHandler) processModelProviderMappingsSheet(f *excelize.File, shee
 			continue // Skip empty rows
 		}
 
-		associationsResult["total"] = associationsResult["total"].(int) + 1
+		modelProviderMappingsResult["total"] = modelProviderMappingsResult["total"].(int) + 1
 
 		// Find provider by name
 		var provider database.Provider
 		if err := h.db.Where("name = ?", row[providerNameIdx]).First(&provider).Error; err != nil {
-			associationsResult["errors"] = append(associationsResult["errors"].([]interface{}), gin.H{"row": i+1, "field": "provider_name", "error": "Provider not found: " + row[providerNameIdx]})
+			modelProviderMappingsResult["errors"] = append(modelProviderMappingsResult["errors"].([]interface{}), gin.H{"row": i+1, "field": "provider_name", "error": "Provider not found: " + row[providerNameIdx]})
 			continue
 		}
 
 		// Find model by name
 		var model database.Model
 		if err := h.db.Where("name = ?", row[modelNameIdx]).First(&model).Error; err != nil {
-			associationsResult["errors"] = append(associationsResult["errors"].([]interface{}), gin.H{"row": i+1, "field": "model_name", "error": "Model not found: " + row[modelNameIdx]})
+			modelProviderMappingsResult["errors"] = append(modelProviderMappingsResult["errors"].([]interface{}), gin.H{"row": i+1, "field": "model_name", "error": "Model not found: " + row[modelNameIdx]})
 			continue
 		}
 
 		// Check if association already exists
 		var existingMapping database.ModelProviderMapping
 		if err := h.db.Where("model_id = ? AND provider_id = ?", model.ID, provider.ID).First(&existingMapping).Error; err == nil {
-			associationsResult["skipped"] = associationsResult["skipped"].(int) + 1
+			modelProviderMappingsResult["skipped"] = modelProviderMappingsResult["skipped"].(int) + 1
 			continue
 		}
 
@@ -478,9 +478,9 @@ func (h *ImportHandler) processModelProviderMappingsSheet(f *excelize.File, shee
 		}
 
 		if err := h.db.Create(&mapping).Error; err != nil {
-			associationsResult["errors"] = append(associationsResult["errors"].([]interface{}), gin.H{"row": i+1, "field": "database", "error": err.Error()})
+			modelProviderMappingsResult["errors"] = append(modelProviderMappingsResult["errors"].([]interface{}), gin.H{"row": i+1, "field": "database", "error": err.Error()})
 		} else {
-			associationsResult["imported"] = associationsResult["imported"].(int) + 1
+			modelProviderMappingsResult["imported"] = modelProviderMappingsResult["imported"].(int) + 1
 		}
 	}
 }
