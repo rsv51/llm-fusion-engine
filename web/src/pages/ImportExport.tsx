@@ -97,16 +97,9 @@ export const ImportExport: React.FC = () => {
     const file = event.target.files?.[0]
     if (!file) return
 
-    // Check file type
-    const allowedTypes = [
-      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', // .xlsx
-      'application/json',
-      'application/x-yaml',
-      'text/yaml'
-    ]
-    
-    if (!allowedTypes.includes(file.type) && !file.name.endsWith('.xlsx') && !file.name.endsWith('.json') && !file.name.endsWith('.yaml') && !file.name.endsWith('.yml')) {
-      alert('不支持的文件类型，请上传 .xlsx、.json、.yaml 或 .yml 文件')
+    // Check file type - only accept Excel files
+    if (!file.name.endsWith('.xlsx')) {
+      alert('不支持的文件类型，请上传 .xlsx 文件')
       return
     }
 
@@ -235,8 +228,8 @@ export const ImportExport: React.FC = () => {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">导入导出管理</h1>
-          <p className="text-sm text-gray-500 mt-1">批量导入导出系统配置，支持Excel、JSON、YAML格式</p>
+          <h1 className="text-2xl font-bold text-gray-900">系统设置迁移</h1>
+          <p className="text-sm text-gray-500 mt-1">在此处导出或导入您的系统配置(Excel格式)</p>
         </div>
       </div>
 
@@ -246,7 +239,7 @@ export const ImportExport: React.FC = () => {
           <Download className="w-5 h-5 mr-2" />
           导出配置
         </h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <Button
             onClick={() => downloadTemplate(false)}
             className="flex flex-col items-center h-auto py-4"
@@ -272,18 +265,8 @@ export const ImportExport: React.FC = () => {
             className="flex flex-col items-center h-auto py-4"
           >
             <Download className="w-8 h-8 mb-2" />
-            <span className="text-sm">导出Excel</span>
-            <span className="text-xs text-gray-500">当前配置</span>
-          </Button>
-          
-          <Button
-            onClick={() => exportConfig('json')}
-            className="flex flex-col items-center h-auto py-4"
-            variant="secondary"
-          >
-            <Download className="w-8 h-8 mb-2" />
-            <span className="text-sm">导出JSON</span>
-            <span className="text-xs text-gray-500">备份格式</span>
+            <span className="text-sm">导出配置</span>
+            <span className="text-xs text-gray-500">当前配置(Excel)</span>
           </Button>
         </div>
       </Card>
@@ -297,16 +280,16 @@ export const ImportExport: React.FC = () => {
         
         <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center">
           <Upload className="w-12 h-12 mx-auto text-gray-400 mb-4" />
-          <p className="text-lg font-medium text-gray-700 mb-2">上传配置文件</p>
+          <p className="text-lg font-medium text-gray-700 mb-2">上传Excel配置文件</p>
           <p className="text-sm text-gray-500 mb-4">
-            支持 .xlsx、.json、.yaml、.yml 格式
+            仅支持 .xlsx 格式
           </p>
           
           <input
             type="file"
             id="file-upload"
             className="hidden"
-            accept=".xlsx,.json,.yaml,.yml"
+            accept=".xlsx"
             onChange={handleFileUpload}
             disabled={isUploading}
           />
