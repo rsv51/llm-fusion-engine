@@ -3,6 +3,7 @@ package core
 import (
 	"llm-fusion-engine/internal/database"
 	"net/http"
+	"time"
 )
 
 // ProviderRouteResult defines the result of a routing decision.
@@ -11,6 +12,8 @@ type ProviderRouteResult struct {
 	Provider      *database.Provider
 	ApiKey        string
 	ResolvedModel string
+	RetryCount    int
+	RetryAfter    time.Duration
 }
 
 // IProviderRouter is responsible for routing a request to the appropriate provider group.
@@ -42,4 +45,13 @@ type IMultiProviderService interface {
 		requestBody map[string]interface{},
 		proxyKey string,
 	) (*http.Response, error)
+	LogRequest(
+		requestBody map[string]interface{},
+		proxyKey string,
+		providerName string,
+		requestUrl string,
+		response *http.Response,
+		isSuccess bool,
+		latency time.Duration,
+	)
 }

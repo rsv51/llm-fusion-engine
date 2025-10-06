@@ -57,29 +57,19 @@ func (h *ChatHandler) ChatCompletions(c *gin.Context) {
 		isStreaming = true
 	}
 
-	// Copy headers from the downstream response to the client response
-	for key, values := range resp.Header {
-		for _, value := range values {
-			c.Header(key, value)
-		}
-	}
-	c.Status(resp.StatusCode)
-
 	if isStreaming {
-		// For streaming responses, we need to continuously read from the downstream
-		// response body and write to the client's response writer.
-		c.Stream(func(w io.Writer) bool {
-			// Copy a chunk of data from the downstream response to the client
-			_, err := io.CopyN(w, resp.Body, 2048) // Read in 2KB chunks
-			if err != nil {
-				// If we've reached the end of the stream, io.EOF will be reported.
-				// In that case, we return false to stop streaming.
-				return false
-			}
-			return true
-		})
+		// Use TransparentStreamingActionResult for streaming
+		actionResult := NewTransparentStreamingActionResult(resp)
+		actionResult.ExecuteResultAsync(c)
 	} else {
-		// For non-streaming responses, just copy the entire body at once.
+		// For non-streaming responses, copy headers and body
+		defer resp.Body.Close()
+		for key, values := range resp.Header {
+			for _, value := range values {
+				c.Header(key, value)
+			}
+		}
+		c.Status(resp.StatusCode)
 		io.Copy(c.Writer, resp.Body)
 	}
 }

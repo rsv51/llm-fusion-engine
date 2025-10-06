@@ -56,12 +56,9 @@ type Provider struct {
 	Config       string `gorm:"type:text" json:"config"`       // JSON string for settings (e.g., {"apiKey": "...", "baseUrl": "...", "chatEndpoint": "v1/chat/completions"})
 	Console      string `gorm:"type:varchar(255)" json:"console"` // Optional console URL for the provider
 	Enabled      bool   `gorm:"default:true" json:"enabled"`
-	Priority     int    `gorm:"default:0" json:"priority"` // For failover sorting
-	Weight       uint   `gorm:"default:1" json:"weight"` // For load balancing if used directly
-	HealthStatus string `gorm:"default:'unknown'" json:"healthStatus"` // healthy/unhealthy/unknown
-	LastChecked  *time.Time `json:"lastChecked"`
-	Latency      uint   `json:"latency"` // in milliseconds
-	ApiKeys      []ApiKey `json:"apiKeys"` // Has-many relationship
+	Priority     int    `gorm:"default:0" json:"priority"`      // Priority for failover (higher is first)
+	Weight       uint   `gorm:"default:100" json:"weight"`      // Weight for load balancing
+	Timeout      int    `gorm:"default:300" json:"timeout"`     // Timeout in seconds
 }
 
 // ApiKey stores an individual API key for a provider.
@@ -75,20 +72,19 @@ type ApiKey struct {
 	TpmLimit   int       `json:"tpmLimit"`
 }
 
-// RequestLog records API request details for monitoring and analytics.
-type RequestLog struct {
-	BaseModel
-	GroupID          uint   `gorm:"index" json:"groupId"`
-	ProviderID       uint   `gorm:"index" json:"providerId"`
-	Model            string `gorm:"index" json:"model"`
-	StatusCode       int    `gorm:"index" json:"statusCode"`
-	LatencyMs        int64  `json:"latencyMs"`
-	PromptTokens     int    `json:"promptTokens"`
-	CompletionTokens int    `json:"completionTokens"`
-	TotalTokens      int    `json:"totalTokens"`
-	ErrorMessage     string `json:"errorMessage"`
-	RequestIP        string `json:"requestIp"`
-	UserAgent        string `json:"userAgent"`
+// Log records API request details for monitoring and analytics.
+type Log struct {
+	ID             string    `gorm:"primary_key" json:"id"`
+	ProxyKey       string    `gorm:"index" json:"proxy_key"`
+	Model          string    `gorm:"index" json:"model"`
+	Provider       string    `gorm:"index" json:"provider"`
+	RequestURL     string    `json:"request_url"`
+	RequestBody    string    `json:"request_body"`
+	ResponseBody   string    `json:"response_body"`
+	ResponseStatus int       `gorm:"index" json:"response_status"`
+	IsSuccess      bool      `json:"is_success"`
+	Latency        int64     `json:"latency"` // in milliseconds
+	Timestamp      time.Time `gorm:"index" json:"timestamp"`
 }
 
 // Model represents a user-friendly definition of a model with common configurations.

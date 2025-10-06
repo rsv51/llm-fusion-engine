@@ -17,7 +17,7 @@ func InitDatabase(dsn string) (*gorm.DB, error) {
 	}
 
 	// Auto-migrate the schema
-	err = DB.AutoMigrate(&User{}, &ProxyKey{}, &Group{}, &Provider{}, &ApiKey{}, &RequestLog{}, &Model{}, &ModelProviderMapping{})
+	err = DB.AutoMigrate(&User{}, &ProxyKey{}, &Group{}, &Provider{}, &ApiKey{}, &Log{}, &Model{}, &ModelProviderMapping{})
 	if err != nil {
 		return nil, err
 	}
