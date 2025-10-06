@@ -1,15 +1,12 @@
 import React, { useState } from 'react'
 import { Card, Button } from '../components/ui'
-import { Save, RefreshCw, Database, Shield, Bell, Globe, Upload, Download, User, Copy } from 'lucide-react'
-import { api } from '../services'
+import { Save, RefreshCw, Shield, User } from 'lucide-react'
 import { authApi } from '../services'
+import { ImportExport } from './ImportExport'
 
 export const Settings: React.FC = () => {
   const [saving, setSaving] = useState(false)
   const [activeTab, setActiveTab] = useState('general')
-  const [importing, setImporting] = useState(false)
-  const [migrationData, setMigrationData] = useState('')
-  const [migrationFormat, setMigrationFormat] = useState('json')
   const [username, setUsername] = useState('admin')
   const [currentPassword, setCurrentPassword] = useState('')
   const [newPassword, setNewPassword] = useState('')
@@ -35,39 +32,6 @@ export const Settings: React.FC = () => {
   };
 
 
-  const handleExport = async () => {
-    try {
-      const response = await api.get(`/admin/export/all?format=${migrationFormat}`, { responseType: 'text' });
-      setMigrationData(response.data as string);
-    } catch (error) {
-      console.error('导出失败:', error);
-      alert('导出失败');
-    }
-  };
-
-  const handleImport = async () => {
-    if (!migrationData.trim()) {
-      alert('请在文本框中粘贴要导入的配置。');
-      return;
-    }
-    setImporting(true);
-    try {
-      await api.post('/admin/import/all', migrationData, {
-        headers: { 'Content-Type': migrationFormat === 'json' ? 'application/json' : 'application/x-yaml' },
-      });
-      alert('导入成功！');
-    } catch (error) {
-      console.error('导入失败:', error);
-      alert('导入失败');
-    } finally {
-      setImporting(false);
-    }
-  };
-
-  const handleCopy = () => {
-    navigator.clipboard.writeText(migrationData);
-    alert('已复制到剪贴板');
-  };
 
   const renderGeneralSettings = () => (
     <div className="space-y-6">
@@ -159,36 +123,7 @@ export const Settings: React.FC = () => {
   )
 
   const renderMigration = () => (
-    <Card>
-      <div className="p-6">
-        <h2 className="text-lg font-semibold text-gray-900">配置迁移</h2>
-        <p className="text-sm text-gray-500 mt-1">在此处导出或导入您的系统配置。</p>
-        
-        <div className="mt-4">
-          <textarea
-            className="w-full h-64 p-2 border rounded font-mono text-sm"
-            value={migrationData}
-            onChange={(e) => setMigrationData(e.target.value)}
-            placeholder="在此处粘贴您的JSON或YAML配置以进行导入，或点击“导出”生成当前配置。"
-          />
-        </div>
-
-        <div className="mt-4 flex justify-between items-center">
-          <div className="flex gap-2">
-            <Button onClick={handleExport}>导出</Button>
-            <Button onClick={handleImport} disabled={importing}>{importing ? '导入中...' : '导入'}</Button>
-            <Button variant="secondary" onClick={handleCopy}><Copy className="w-4 h-4 mr-2" />复制</Button>
-          </div>
-          <div className="flex items-center gap-2">
-            <label className="text-sm font-medium">格式:</label>
-            <select value={migrationFormat} onChange={(e) => setMigrationFormat(e.target.value)} className="p-2 border rounded">
-              <option value="json">JSON</option>
-              <option value="yaml">YAML</option>
-            </select>
-          </div>
-        </div>
-      </div>
-    </Card>
+    <ImportExport />
   );
 
   return (
