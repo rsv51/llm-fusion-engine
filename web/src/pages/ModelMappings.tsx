@@ -27,7 +27,7 @@ export const ModelMappings: React.FC = () => {
         api.get<any>('/admin/model-provider-mappings'),
         api.get<any>('/admin/models'),
         api.get<any>('/admin/providers'),
-      ]);
+      ]) as [any, any, any];
       console.log('ModelProviderMappings API Response:', mappingsResponse); // 添加日志
       console.log('Models API Response:', modelsResponse); // 添加日志
       console.log('Providers API Response in ModelMappings:', providersResponse); // 添加日志
@@ -43,9 +43,9 @@ export const ModelMappings: React.FC = () => {
 
       if (modelsResponse && Array.isArray(modelsResponse.data)) {
         setModels(modelsResponse.data);
+      } else if (modelsResponse && Array.isArray(modelsResponse.items)) {
+        setModels(modelsResponse.items);
       } else if (modelsResponse && modelsResponse.data && Array.isArray(modelsResponse.data.items)) {
-        setModels(modelsResponse.data.items);
-      } else if (modelsResponse && modelsResponse.data && modelsResponse.data.items && Array.isArray(modelsResponse.data.items)) {
         setModels(modelsResponse.data.items);
       } else {
         const errorMsg = 'Models API 响应数据格式不正确: ' + JSON.stringify(modelsResponse);
@@ -55,9 +55,9 @@ export const ModelMappings: React.FC = () => {
 
       if (providersResponse && Array.isArray(providersResponse.data)) {
         setProviders(providersResponse.data);
+      } else if (providersResponse && Array.isArray(providersResponse.items)) {
+        setProviders(providersResponse.items);
       } else if (providersResponse && providersResponse.data && Array.isArray(providersResponse.data.items)) {
-        setProviders(providersResponse.data.items);
-      } else if (providersResponse && providersResponse.data && providersResponse.data.items && Array.isArray(providersResponse.data.items)) {
         setProviders(providersResponse.data.items);
       } else {
         const errorMsg = 'Providers API (in ModelMappings) 响应数据格式不正确: ' + JSON.stringify(providersResponse);
