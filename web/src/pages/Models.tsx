@@ -226,7 +226,10 @@ const ModelModal: React.FC<ModelModalProps> = ({ isOpen, onClose, onSubmit, mode
 
   useEffect(() => {
     if (model) {
-      setFormData(model)
+      setFormData({
+        ...model,
+        enabled: model.enabled ?? true,
+      })
     } else {
       setFormData({ name: '', remark: '', maxRetry: 3, timeout: 30, enabled: true })
     }
@@ -234,6 +237,10 @@ const ModelModal: React.FC<ModelModalProps> = ({ isOpen, onClose, onSubmit, mode
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
+    if (!formData.name?.trim()) {
+      alert('模型名称不能为空')
+      return
+    }
     onSubmit(formData)
   }
 
@@ -276,7 +283,7 @@ const ModelModal: React.FC<ModelModalProps> = ({ isOpen, onClose, onSubmit, mode
         <div className="flex items-center gap-2">
           <input
             type="checkbox"
-            checked={formData.enabled}
+            checked={formData.enabled ?? false}
             onChange={(e) => setFormData({ ...formData, enabled: e.target.checked })}
           />
           <label>启用</label>

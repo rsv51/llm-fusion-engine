@@ -383,13 +383,21 @@ const ModelSelector: React.FC<{
   selectedModel?: Model | null;
 }> = ({ models, providers, selectedProviderId, onProviderChange, onModelSelect, selectedModel }) => {
   const [filteredModels, setFilteredModels] = useState<Model[]>([]);
+  const [modelSearch, setModelSearch] = useState('');
   
-  // 当选择的供应商变化时，筛选对应的模型
+  // 当选择的供应商或搜索词变化时,筛选对应的模型
   useEffect(() => {
-    // 始终显示所有模型,不进行筛选
-    // 因为模型配置是独立于供应商的,用户应该能看到所有已配置的模型
-    setFilteredModels(models);
-  }, [selectedProviderId, models, providers]);
+    let currentModels = models;
+    
+    if (modelSearch.trim()) {
+      currentModels = currentModels.filter(m =>
+        m.name.toLowerCase().includes(modelSearch.toLowerCase()) ||
+        m.remark?.toLowerCase().includes(modelSearch.toLowerCase())
+      );
+    }
+    
+    setFilteredModels(currentModels);
+  }, [selectedProviderId, models, providers, modelSearch]);
 
   return (
     <div className="space-y-4">
@@ -407,6 +415,12 @@ const ModelSelector: React.FC<{
       
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-2">选择模型</label>
+        <Input
+          placeholder="搜索模型名称或备注..."
+          value={modelSearch}
+          onChange={(e) => setModelSearch(e.target.value)}
+          className="mb-2"
+        />
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2 max-h-60 overflow-y-auto p-1 border rounded">
           {filteredModels.length > 0 ? (
             filteredModels.map(model => (
