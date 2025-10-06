@@ -1,11 +1,11 @@
 import React, { useEffect, useState } from 'react'
 import { Card, Badge } from '../components/ui'
 import { logsApi } from '../services'
-import type { RequestLog } from '../types'
+import type { Log } from '../types'
 import { Search, Filter, RefreshCw } from 'lucide-react'
 
 export const Logs: React.FC = () => {
-  const [logs, setLogs] = useState<RequestLog[]>([])
+  const [logs, setLogs] = useState<Log[]>([])
   const [loading, setLoading] = useState(false)
   const [pagination, setPagination] = useState({
     page: 1,
@@ -39,15 +39,11 @@ export const Logs: React.FC = () => {
     fetchLogs()
   }, [])
 
-  const getStatusBadge = (status: number) => {
-    if (status >= 200 && status < 300) {
-      return <Badge variant="success">{status}</Badge>
-    } else if (status >= 400 && status < 500) {
-      return <Badge variant="warning">{status}</Badge>
-    } else if (status >= 500) {
-      return <Badge variant="error">{status}</Badge>
+  const getStatusBadge = (isSuccess: boolean) => {
+    if (isSuccess) {
+      return <Badge variant="success">成功</Badge>
     }
-    return <Badge>{status}</Badge>
+    return <Badge variant="error">失败</Badge>
   }
 
   const formatDate = (date: string) => {
@@ -96,7 +92,7 @@ export const Logs: React.FC = () => {
               <tr className="border-b border-gray-200">
                 <th className="px-4 py-3 text-left text-sm font-medium text-gray-700">时间</th>
                 <th className="px-4 py-3 text-left text-sm font-medium text-gray-700">模型</th>
-                <th className="px-4 py-3 text-left text-sm font-medium text-gray-700">分组</th>
+                <th className="px-4 py-3 text-left text-sm font-medium text-gray-700">供应商</th>
                 <th className="px-4 py-3 text-left text-sm font-medium text-gray-700">状态</th>
                 <th className="px-4 py-3 text-left text-sm font-medium text-gray-700">延迟</th>
                 <th className="px-4 py-3 text-left text-sm font-medium text-gray-700">Token</th>
@@ -119,14 +115,14 @@ export const Logs: React.FC = () => {
                 logs.map((log) => (
                   <tr key={log.id} className="border-b border-gray-100 hover:bg-gray-50">
                     <td className="px-4 py-3 text-sm text-gray-900">
-                      {formatDate(log.createdAt)}
+                      {formatDate(log.timestamp)}
                     </td>
                     <td className="px-4 py-3 text-sm text-gray-900">{log.model}</td>
-                    <td className="px-4 py-3 text-sm text-gray-600">{log.providerName}</td>
-                    <td className="px-4 py-3 text-sm">{getStatusBadge(log.statusCode)}</td>
-                    <td className="px-4 py-3 text-sm text-gray-600">{log.latencyMs}ms</td>
+                    <td className="px-4 py-3 text-sm text-gray-600">{log.provider}</td>
+                    <td className="px-4 py-3 text-sm">{getStatusBadge(log.is_success)}</td>
+                    <td className="px-4 py-3 text-sm text-gray-600">{log.latency}ms</td>
                     <td className="px-4 py-3 text-sm text-gray-600">
-                      {log.promptTokens + log.completionTokens}
+                      {log.total_tokens}
                     </td>
                   </tr>
                 ))

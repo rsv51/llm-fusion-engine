@@ -1,25 +1,26 @@
 // 请求日志相关类型定义
 
-export interface RequestLog {
+export interface Log {
   id: string
+  proxy_key: string
   model: string
-  providerName: string
-  providerType: string
-  statusCode: number
-  latencyMs: number
-  totalTokens: number
-  promptTokens: number
-  completionTokens: number
-  errorMessage?: string
-  createdAt: string
+  provider: string
+  request_url: string
+  response_status: number
+  is_success: boolean
+  latency: number // in milliseconds
+  timestamp: string
+  prompt_tokens: number
+  completion_tokens: number
+  total_tokens: number
 }
 
 export interface LogQueryParams {
   page?: number
   pageSize?: number
   model?: string
-  providerName?: string
-  status?: 'success' | 'error'
+  provider?: string
+  status?: number
   startDate?: string
   endDate?: string
 }
