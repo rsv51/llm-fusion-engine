@@ -52,7 +52,7 @@ export const ImportExport: React.FC = () => {
 
   const downloadTemplate = async (withSample: boolean = false) => {
     try {
-      const response = await api.get(`/api/admin/export/template?with_sample=${withSample}`, {
+      const response = await api.get(`/admin/export/template?with_sample=${withSample}`, {
         responseType: 'blob'
       })
       
@@ -74,7 +74,7 @@ export const ImportExport: React.FC = () => {
   const exportConfig = async () => {
     setIsExporting(true)
     try {
-      const response = await api.get('/api/admin/export/all', {
+      const response = await api.get('/admin/export/all', {
         responseType: 'blob'
       })
       
@@ -112,7 +112,7 @@ export const ImportExport: React.FC = () => {
     formData.append('file', file)
 
     try {
-      const response = await api.post('/api/admin/import/all', formData, {
+      const response = await api.post('/admin/import/all', formData, {
         headers: {
           'Content-Type': 'multipart/form-data'
         }

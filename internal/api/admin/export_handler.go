@@ -152,25 +152,25 @@ func (h *ExportHandler) createModelsSheet(f *excelize.File, withSample bool) {
 }
 
 func (h *ExportHandler) createAssociationsSheet(f *excelize.File, withSample bool) {
-	// Create Associations sheet
-	idx, _ := f.NewSheet("Associations")
+	// Create ModelProviderMappings sheet
+	idx, _ := f.NewSheet("ModelProviderMappings")
 	f.SetActiveSheet(idx)
 	
 	// Set headers
-	headers := []string{"model_name", "provider_name", "provider_model", "supports_tools", "supports_vision", "weight", "enabled"}
+	headers := []string{"ModelName", "ProviderName", "ProviderModel", "ToolCall", "StructuredOutput", "Image", "Weight", "Enabled"}
 	for i, header := range headers {
-		f.SetCellValue("Associations", fmt.Sprintf("%c1", 'A'+i), header)
+		f.SetCellValue("ModelProviderMappings", fmt.Sprintf("%c1", 'A'+i), header)
 	}
 	
 	if withSample {
 		// Add sample data
 		sampleData := [][]interface{}{
-			{"gpt-4o", "OpenAI-Main", "gpt-4o-2024-05-13", true, true, 100, true},
-			{"claude-3.5-sonnet", "Anthropic-Main", "claude-3-5-sonnet-20241022", true, true, 100, true},
+			{"gpt-4o", "OpenAI-Main", "gpt-4o-2024-05-13", true, false, true, 100, true},
+			{"claude-3.5-sonnet", "Anthropic-Main", "claude-3-5-sonnet-20241022", true, true, false, 100, true},
 		}
 		for i, row := range sampleData {
 			for j, value := range row {
-				f.SetCellValue("Associations", fmt.Sprintf("%c%d", 'A'+j, i+2), value)
+				f.SetCellValue("ModelProviderMappings", fmt.Sprintf("%c%d", 'A'+j, i+2), value)
 			}
 		}
 	}
