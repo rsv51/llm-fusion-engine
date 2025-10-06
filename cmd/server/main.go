@@ -38,6 +38,7 @@ func main() {
 	groupHandler := admin.NewGroupHandler(db)
 	statsHandler := admin.NewStatsHandler(db, startTime)
 	keyHandler := admin.NewKeyHandler(db)
+	proxyKeyHandler := admin.NewProxyKeyHandler(db)
 	logHandler := admin.NewLogHandler(db)
 	exportHandler := admin.NewExportHandler(db)
 	importHandler := admin.NewImportHandler(db)
@@ -115,12 +116,19 @@ func main() {
 		adminGroup.GET("/model-provider-mappings/:id/health", modelProviderMappingHandler.GetMappingHealthStatus)
 		adminGroup.GET("/model-provider-mappings/health/all", modelProviderMappingHandler.GetAllMappingsHealthStatus)
 
-		// Keys
+		// Keys (Provider API Keys)
 		adminGroup.POST("/keys", keyHandler.CreateKey)
 		adminGroup.GET("/keys", keyHandler.GetKeys)
 		adminGroup.GET("/keys/:id", keyHandler.GetKey)
 		adminGroup.PUT("/keys/:id", keyHandler.UpdateKey)
 		adminGroup.DELETE("/keys/:id", keyHandler.DeleteKey)
+		
+		// Proxy Keys (User Access Keys)
+		adminGroup.POST("/proxy-keys", proxyKeyHandler.CreateProxyKey)
+		adminGroup.GET("/proxy-keys", proxyKeyHandler.GetProxyKeys)
+		adminGroup.GET("/proxy-keys/:id", proxyKeyHandler.GetProxyKey)
+		adminGroup.PUT("/proxy-keys/:id", proxyKeyHandler.UpdateProxyKey)
+		adminGroup.DELETE("/proxy-keys/:id", proxyKeyHandler.DeleteProxyKey)
 		
 		// Logs
 		adminGroup.GET("/logs", logHandler.GetLogs)

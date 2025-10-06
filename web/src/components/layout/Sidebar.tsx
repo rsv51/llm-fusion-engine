@@ -4,6 +4,7 @@ import {
   LayoutDashboard,
   Users,
   Key,
+  Shield,
   Box,
   FileText,
   Settings,
@@ -19,7 +20,8 @@ interface SidebarProps {
 const navigation = [
   { name: '仪表盘', href: '/dashboard', icon: LayoutDashboard },
   { name: '分组管理', href: '/groups', icon: Users },
-  { name: '密钥管理', href: '/keys', icon: Key },
+  { name: '供应商密钥', href: '/keys', icon: Key },
+  { name: '代理密钥', href: '/proxy-keys', icon: Shield },
   { name: '供应商管理', href: '/providers', icon: Users },
   { name: '模型配置', href: '/models', icon: Box },
   { name: '模型映射', href: '/model-mappings', icon: GitMerge },

@@ -1,6 +1,7 @@
 export { Dashboard } from './Dashboard'
 export { Groups } from './Groups'
 export { Keys } from './Keys'
+export { ProxyKeys } from './ProxyKeys'
 export { Logs } from './Logs'
 export { Models } from './Models'
 export { Settings } from './Settings'
