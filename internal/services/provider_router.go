@@ -1,6 +1,7 @@
 package services
 
 import (
+	"encoding/json"
 	"errors"
 	"llm-fusion-engine/internal/core"
 	"llm-fusion-engine/internal/database"
@@ -51,29 +52,31 @@ func (r *ProviderRouter) RouteRequestAsync(model, proxyKey string, excludedProvi
 		return mappings[i].Provider.Priority > mappings[j].Provider.Priority
 	})
 
-	// 4. Iterate through sorted providers and try to get a key (this is the failover mechanism)
+	// 4. Iterate through sorted providers and try to get a key from the provider's config.
 	for _, mapping := range mappings {
 		provider := &mapping.Provider
-
-		// Try to get a key for this provider
 		var apiKey string
-		var keyErr error
-		if km, ok := r.keyManager.(*KeyManager); ok {
-			apiKey, keyErr = km.GetNextKeyForProviderAsync(provider.ID)
-		} else {
-			keyErr = errors.New("key manager does not support direct provider key retrieval")
+		keyFound := false
+
+		// API keys are stored in the provider's JSON config.
+		var config map[string]interface{}
+		if json.Unmarshal([]byte(provider.Config), &config) == nil {
+			if configKey, ok := config["apiKey"].(string); ok && configKey != "" {
+				apiKey = configKey
+				keyFound = true
+			}
 		}
 
-		if keyErr == nil {
-			// Success! We found a working provider and key.
+		if keyFound {
+			// Success! We found a key in the provider's config.
 			return &core.ProviderRouteResult{
-				Group:         nil, // No group context when using direct mapping
+				Group:         nil,
 				Provider:      provider,
 				ApiKey:        apiKey,
 				ResolvedModel: mapping.ProviderModel,
 			}, nil
 		}
-		// If getting a key fails, the loop will continue to the next provider with lower priority.
+		// If no key is found in the config, the loop will continue to the next provider (failover).
 	}
 
 	// 5. If the loop completes, it means no provider in the mapping had a working key

@@ -21,8 +21,6 @@ type IProviderRouter interface {
 
 // IKeyManager manages the API keys for different provider groups.
 type IKeyManager interface {
-	// GetNextKeyAsync retrieves the next available and healthy API key for a given group.
-	GetNextKeyAsync(groupID uint) (string, error)
 	// ValidateProxyKeyAsync checks if a proxy key is valid and returns it.
 	ValidateProxyKeyAsync(proxyKey string) (*database.ProxyKey, error)
 }
