@@ -33,7 +33,7 @@ func main() {
 	multiProviderService := services.NewMultiProviderService(providerRouter, nil, db) // Pass nil for factory for now
 
 	// 3. Initialize Handlers
-	chatHandler := v1.NewChatHandler(multiProviderService)
+	chatHandler := v1.NewChatHandler(multiProviderService, keyManager)
 	authHandler := admin.NewAuthHandler(db)
 	groupHandler := admin.NewGroupHandler(db)
 	statsHandler := admin.NewStatsHandler(db, startTime)
