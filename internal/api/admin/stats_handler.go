@@ -66,7 +66,7 @@ func (h *StatsHandler) GetStats(c *gin.Context) {
 	for i, p := range providerStats {
 		var provider database.Provider
 		if err := h.db.First(&provider, p.ProviderID).Error; err == nil {
-			providerStats[i].ProviderName = provider.ProviderType
+			providerStats[i].ProviderName = provider.Type
 		}
 	}
 

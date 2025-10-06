@@ -90,8 +90,8 @@ func (h *ExportHandler) exportToJSON(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve api keys"})
 		return
 	}
-	if err = h.db.Find(&migrationData.ModelMappings).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve model mappings"})
+	if err = h.db.Find(&migrationData.ModelProviderMappings).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve model provider mappings"})
 		return
 	}
 
@@ -119,8 +119,8 @@ func (h *ExportHandler) exportToYAML(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve api keys"})
 		return
 	}
-	if err = h.db.Find(&migrationData.ModelMappings).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve model mappings"})
+	if err = h.db.Find(&migrationData.ModelProviderMappings).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve model provider mappings"})
 		return
 	}
 
@@ -143,17 +143,19 @@ func (h *ExportHandler) exportToExcel(c *gin.Context) {
 	var groups []database.Group
 	var providers []database.Provider
 	var apiKeys []database.ApiKey
-	var modelMappings []database.ModelMapping
+	var modelProviderMappings []database.ModelProviderMapping
+	var models []database.Model
 
 	h.db.Find(&groups)
 	h.db.Find(&providers)
 	h.db.Find(&apiKeys)
-	h.db.Preload("Provider").Find(&modelMappings)
+	h.db.Find(&models)
+	h.db.Preload("Provider").Preload("Model").Find(&modelProviderMappings)
 
 	// Create sheets with actual data
 	h.createProvidersSheetWithData(f, providers)
-	h.createModelsSheetWithData(f, modelMappings)
-	h.createAssociationsSheetWithData(f, modelMappings)
+	h.createModelsSheetWithData(f, models)
+	h.createModelProviderMappingsSheetWithData(f, modelProviderMappings)
 
 	// Set response headers
 	timestamp := time.Now().Format("20060102_150405")
@@ -248,7 +250,7 @@ func (h *ExportHandler) createProvidersSheetWithData(f *excelize.File, providers
 	f.SetActiveSheet(idx)
 	
 	// Set headers
-	headers := []string{"ID", "GroupID", "ProviderType", "Weight", "Enabled", "BaseURL", "Timeout", "MaxRetries", "HealthStatus", "LastChecked"}
+	headers := []string{"ID", "Name", "Type", "Config", "Console", "Enabled", "Weight", "HealthStatus", "LastChecked", "Latency"}
 	for i, header := range headers {
 		f.SetCellValue("Providers", fmt.Sprintf("%c1", 'A'+i), header)
 	}
@@ -257,57 +259,65 @@ func (h *ExportHandler) createProvidersSheetWithData(f *excelize.File, providers
 	for i, provider := range providers {
 		row := i + 2
 		f.SetCellValue("Providers", fmt.Sprintf("A%d", row), provider.ID)
-		f.SetCellValue("Providers", fmt.Sprintf("B%d", row), provider.GroupID)
-		f.SetCellValue("Providers", fmt.Sprintf("C%d", row), provider.ProviderType)
-		f.SetCellValue("Providers", fmt.Sprintf("D%d", row), provider.Weight)
-		f.SetCellValue("Providers", fmt.Sprintf("E%d", row), provider.Enabled)
-		f.SetCellValue("Providers", fmt.Sprintf("F%d", row), provider.BaseURL)
-		f.SetCellValue("Providers", fmt.Sprintf("G%d", row), provider.Timeout)
-		f.SetCellValue("Providers", fmt.Sprintf("H%d", row), provider.MaxRetries)
-		f.SetCellValue("Providers", fmt.Sprintf("I%d", row), provider.HealthStatus)
-		f.SetCellValue("Providers", fmt.Sprintf("J%d", row), provider.LastChecked)
+		f.SetCellValue("Providers", fmt.Sprintf("B%d", row), provider.Name)
+		f.SetCellValue("Providers", fmt.Sprintf("C%d", row), provider.Type)
+		f.SetCellValue("Providers", fmt.Sprintf("D%d", row), provider.Config)
+		f.SetCellValue("Providers", fmt.Sprintf("E%d", row), provider.Console)
+		f.SetCellValue("Providers", fmt.Sprintf("F%d", row), provider.Enabled)
+		f.SetCellValue("Providers", fmt.Sprintf("G%d", row), provider.Weight)
+		f.SetCellValue("Providers", fmt.Sprintf("H%d", row), provider.HealthStatus)
+		f.SetCellValue("Providers", fmt.Sprintf("I%d", row), provider.LastChecked)
+		f.SetCellValue("Providers", fmt.Sprintf("J%d", row), provider.Latency)
 	}
 }
 
-func (h *ExportHandler) createModelsSheetWithData(f *excelize.File, modelMappings []database.ModelMapping) {
+func (h *ExportHandler) createModelsSheetWithData(f *excelize.File, models []database.Model) {
 	// Create Models sheet with actual data
 	idx, _ := f.NewSheet("Models")
 	f.SetActiveSheet(idx)
 	
-	// Set headers for model mappings
-	headers := []string{"ID", "UserFriendlyName", "ProviderModelName", "ProviderID"}
+	// Set headers for models
+	headers := []string{"ID", "Name", "Remark", "MaxRetry", "Timeout", "Enabled"}
 	for i, header := range headers {
 		f.SetCellValue("Models", fmt.Sprintf("%c1", 'A'+i), header)
 	}
 	
 	// Add actual data
-	for i, mapping := range modelMappings {
+	for i, model := range models {
 		row := i + 2
-		f.SetCellValue("Models", fmt.Sprintf("A%d", row), mapping.ID)
-		f.SetCellValue("Models", fmt.Sprintf("B%d", row), mapping.UserFriendlyName)
-		f.SetCellValue("Models", fmt.Sprintf("C%d", row), mapping.ProviderModelName)
-		f.SetCellValue("Models", fmt.Sprintf("D%d", row), mapping.ProviderID)
+		f.SetCellValue("Models", fmt.Sprintf("A%d", row), model.ID)
+		f.SetCellValue("Models", fmt.Sprintf("B%d", row), model.Name)
+		f.SetCellValue("Models", fmt.Sprintf("C%d", row), model.Remark)
+		f.SetCellValue("Models", fmt.Sprintf("D%d", row), model.MaxRetry)
+		f.SetCellValue("Models", fmt.Sprintf("E%d", row), model.Timeout)
+		f.SetCellValue("Models", fmt.Sprintf("F%d", row), model.Enabled)
 	}
 }
 
-func (h *ExportHandler) createAssociationsSheetWithData(f *excelize.File, modelMappings []database.ModelMapping) {
-	// Create Associations sheet with actual data
-	idx, _ := f.NewSheet("Associations")
+func (h *ExportHandler) createModelProviderMappingsSheetWithData(f *excelize.File, modelProviderMappings []database.ModelProviderMapping) {
+	// Create ModelProviderMappings sheet with actual data
+	idx, _ := f.NewSheet("ModelProviderMappings")
 	f.SetActiveSheet(idx)
 	
 	// Set headers
-	headers := []string{"ID", "UserFriendlyName", "ProviderModelName", "ProviderID", "ProviderName"}
+	headers := []string{"ID", "ModelID", "ModelName", "ProviderID", "ProviderName", "ProviderModel", "ToolCall", "StructuredOutput", "Image", "Weight", "Enabled"}
 	for i, header := range headers {
-		f.SetCellValue("Associations", fmt.Sprintf("%c1", 'A'+i), header)
+		f.SetCellValue("ModelProviderMappings", fmt.Sprintf("%c1", 'A'+i), header)
 	}
 
-	// Add actual data with provider info
-	for i, mapping := range modelMappings {
+	// Add actual data with model and provider info
+	for i, mapping := range modelProviderMappings {
 		row := i + 2
-		f.SetCellValue("Associations", fmt.Sprintf("A%d", row), mapping.ID)
-		f.SetCellValue("Associations", fmt.Sprintf("B%d", row), mapping.UserFriendlyName)
-		f.SetCellValue("Associations", fmt.Sprintf("C%d", row), mapping.ProviderModelName)
-		f.SetCellValue("Associations", fmt.Sprintf("D%d", row), mapping.ProviderID)
-		f.SetCellValue("Associations", fmt.Sprintf("E%d", row), mapping.Provider.ProviderType)
+		f.SetCellValue("ModelProviderMappings", fmt.Sprintf("A%d", row), mapping.ID)
+		f.SetCellValue("ModelProviderMappings", fmt.Sprintf("B%d", row), mapping.ModelID)
+		f.SetCellValue("ModelProviderMappings", fmt.Sprintf("C%d", row), mapping.Model.Name)
+		f.SetCellValue("ModelProviderMappings", fmt.Sprintf("D%d", row), mapping.ProviderID)
+		f.SetCellValue("ModelProviderMappings", fmt.Sprintf("E%d", row), mapping.Provider.Name)
+		f.SetCellValue("ModelProviderMappings", fmt.Sprintf("F%d", row), mapping.ProviderModel)
+		f.SetCellValue("ModelProviderMappings", fmt.Sprintf("G%d", row), mapping.ToolCall)
+		f.SetCellValue("ModelProviderMappings", fmt.Sprintf("H%d", row), mapping.StructuredOutput)
+		f.SetCellValue("ModelProviderMappings", fmt.Sprintf("I%d", row), mapping.Image)
+		f.SetCellValue("ModelProviderMappings", fmt.Sprintf("J%d", row), mapping.Weight)
+		f.SetCellValue("ModelProviderMappings", fmt.Sprintf("K%d", row), mapping.Enabled)
 	}
 }

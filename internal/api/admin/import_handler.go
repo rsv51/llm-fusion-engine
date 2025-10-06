@@ -161,7 +161,8 @@ func (h *ImportHandler) importFromYAML(c *gin.Context, f interface{}) {
 
 func (h *ImportHandler) importMigrationData(tx *gorm.DB, data MigrationData) error {
 	// Clear existing data
-	if err := tx.Exec("DELETE FROM model_mappings").Error; err != nil { return err }
+	if err := tx.Exec("DELETE FROM model_provider_mappings").Error; err != nil { return err }
+	if err := tx.Exec("DELETE FROM models").Error; err != nil { return err }
 	if err := tx.Exec("DELETE FROM api_keys").Error; err != nil { return err }
 	if err := tx.Exec("DELETE FROM providers").Error; err != nil { return err }
 	if err := tx.Exec("DELETE FROM groups").Error; err != nil { return err }
@@ -176,8 +177,8 @@ func (h *ImportHandler) importMigrationData(tx *gorm.DB, data MigrationData) err
 	if len(data.ApiKeys) > 0 {
 		if err := tx.Create(&data.ApiKeys).Error; err != nil { return err }
 	}
-	if len(data.ModelMappings) > 0 {
-		if err := tx.Create(&data.ModelMappings).Error; err != nil { return err }
+	if len(data.ModelProviderMappings) > 0 {
+		if err := tx.Create(&data.ModelProviderMappings).Error; err != nil { return err }
 	}
 
 	return nil
@@ -264,7 +265,7 @@ func (h *ImportHandler) processProvidersSheet(f *excelize.File, sheetName string
 
 		// Check if provider already exists
 		var existingProvider database.Provider
-		if err := h.db.Where("provider_type = ?", row[nameIdx]).First(&existingProvider).Error; err == nil {
+		if err := h.db.Where("type = ?", row[nameIdx]).First(&existingProvider).Error; err == nil {
 			providersResult["skipped"] = providersResult["skipped"].(int) + 1
 			continue
 		}
@@ -287,14 +288,20 @@ func (h *ImportHandler) processProvidersSheet(f *excelize.File, sheetName string
 			}
 		}
 
-		provider := database.Provider{
-			ProviderType: row[nameIdx],
-			Weight:       uint(weight),
-			Enabled:      enabled,
-		}
+	provider := database.Provider{
+		Name:    row[nameIdx],
+		Type:    row[typeIdx],
+		Weight:  uint(weight),
+		Enabled: enabled,
+	}
 
 		if baseURLIdx != -1 && len(row) > baseURLIdx && row[baseURLIdx] != "" {
-			provider.BaseURL = row[baseURLIdx]
+			// Create config JSON with baseURL
+			config := map[string]interface{}{
+				"baseUrl": row[baseURLIdx],
+			}
+			configJSON, _ := json.Marshal(config)
+			provider.Config = string(configJSON)
 		}
 
 		if err := h.db.Create(&provider).Error; err != nil {
@@ -334,39 +341,41 @@ func (h *ImportHandler) processModelsSheet(f *excelize.File, sheetName string, r
 
 		modelsResult["total"] = modelsResult["total"].(int) + 1
 
-		// Check if model mapping already exists
-		var existingMapping database.ModelMapping
-		if err := h.db.Where("user_friendly_name = ?", row[nameIdx]).First(&existingMapping).Error; err == nil {
+		// Check if model already exists
+		var existingModel database.Model
+		if err := h.db.Where("name = ?", row[nameIdx]).First(&existingModel).Error; err == nil {
 			modelsResult["skipped"] = modelsResult["skipped"].(int) + 1
 			continue
 		}
 
 		// Parse integer values
+		maxRetry := 3
 		if maxRetryIdx != -1 && len(row) > maxRetryIdx && row[maxRetryIdx] != "" {
-			// maxRetry is not used
-		}
-
-		if timeoutIdx != -1 && len(row) > timeoutIdx && row[timeoutIdx] != "" {
-			// timeout is not used
-		}
-
-		// Create model mapping (since we don't have separate models table in current schema)
-		mapping := database.ModelMapping{
-			UserFriendlyName:  row[nameIdx],
-			ProviderModelName: row[nameIdx], // Use same name for provider model
-			ProviderID:        1,              // Default provider ID, should be configurable
-		}
-
-		if remarkIdx != -1 && len(row) > remarkIdx && row[remarkIdx] != "" {
-			// Store remark in a different way since we don't have remark field
-			// We could use userFriendlyName to include remark
-			mapping.UserFriendlyName = row[nameIdx]
-			if row[remarkIdx] != "" {
-				mapping.UserFriendlyName = row[remarkIdx]
+			if val, err := strconv.Atoi(row[maxRetryIdx]); err == nil {
+				maxRetry = val
 			}
 		}
 
-		if err := h.db.Create(&mapping).Error; err != nil {
+		timeout := 30
+		if timeoutIdx != -1 && len(row) > timeoutIdx && row[timeoutIdx] != "" {
+			if val, err := strconv.Atoi(row[timeoutIdx]); err == nil {
+				timeout = val
+			}
+		}
+
+		// Create model
+		model := database.Model{
+			Name:     row[nameIdx],
+			MaxRetry: maxRetry,
+			Timeout:  timeout,
+			Enabled:  true,
+		}
+
+		if remarkIdx != -1 && len(row) > remarkIdx && row[remarkIdx] != "" {
+			model.Remark = row[remarkIdx]
+		}
+
+		if err := h.db.Create(&model).Error; err != nil {
 			modelsResult["errors"] = append(modelsResult["errors"].([]interface{}), gin.H{"row": i + 1, "field": "database", "error": err.Error()})
 		} else {
 			modelsResult["imported"] = modelsResult["imported"].(int) + 1
@@ -406,9 +415,11 @@ func (h *ImportHandler) processAssociationsSheet(f *excelize.File, sheetName str
 
 		associationsResult["total"] = associationsResult["total"].(int) + 1
 
-		// Check if association already exists by user friendly name
-		var existingMapping database.ModelMapping
-		if err := h.db.Where("user_friendly_name = ?", row[modelNameIdx]).First(&existingMapping).Error; err == nil {
+		// Check if association already exists by model and provider
+		var existingMapping database.ModelProviderMapping
+		if err := h.db.Where("model_id = ? AND provider_id = ?",
+			h.db.Raw("SELECT id FROM models WHERE name = ?", row[modelNameIdx]),
+			h.db.Raw("SELECT id FROM providers WHERE type = ?", row[providerNameIdx])).First(&existingMapping).Error; err == nil {
 			associationsResult["skipped"] = associationsResult["skipped"].(int) + 1
 			continue
 		}
@@ -433,15 +444,22 @@ func (h *ImportHandler) processAssociationsSheet(f *excelize.File, sheetName str
 
 		// Find provider by type
 		var provider database.Provider
-		if err := h.db.Where("provider_type = ?", row[providerNameIdx]).First(&provider).Error; err != nil {
+		if err := h.db.Where("type = ?", row[providerNameIdx]).First(&provider).Error; err != nil {
 			associationsResult["errors"] = append(associationsResult["errors"].([]interface{}), gin.H{"row": i + 1, "field": "provider_name", "error": "Provider not found: " + row[providerNameIdx]})
 			continue
 		}
 
-		mapping := database.ModelMapping{
-			UserFriendlyName:  row[modelNameIdx],
-			ProviderModelName: row[providerModelIdx],
-			ProviderID:        provider.ID,
+		// Find model by name
+		var model database.Model
+		if err := h.db.Where("name = ?", row[modelNameIdx]).First(&model).Error; err != nil {
+			associationsResult["errors"] = append(associationsResult["errors"].([]interface{}), gin.H{"row": i + 1, "field": "model_name", "error": "Model not found: " + row[modelNameIdx]})
+			continue
+		}
+
+		mapping := database.ModelProviderMapping{
+			ModelID:       model.ID,
+			ProviderID:    provider.ID,
+			ProviderModel: row[providerModelIdx],
 		}
 
 		if err := h.db.Create(&mapping).Error; err != nil {
