@@ -52,16 +52,34 @@ func (h *ChatHandler) ChatCompletions(c *gin.Context) {
 	defer resp.Body.Close()
 
 	// 5. Proxy the response
-	// Copy headers
+	isStreaming := false
+	if stream, ok := requestBody["stream"].(bool); ok && stream {
+		isStreaming = true
+	}
+
+	// Copy headers from the downstream response to the client response
 	for key, values := range resp.Header {
 		for _, value := range values {
 			c.Header(key, value)
 		}
 	}
-
-	// Copy status code
 	c.Status(resp.StatusCode)
 
-	// Copy body
-	io.Copy(c.Writer, resp.Body)
+	if isStreaming {
+		// For streaming responses, we need to continuously read from the downstream
+		// response body and write to the client's response writer.
+		c.Stream(func(w io.Writer) bool {
+			// Copy a chunk of data from the downstream response to the client
+			_, err := io.CopyN(w, resp.Body, 2048) // Read in 2KB chunks
+			if err != nil {
+				// If we've reached the end of the stream, io.EOF will be reported.
+				// In that case, we return false to stop streaming.
+				return false
+			}
+			return true
+		})
+	} else {
+		// For non-streaming responses, just copy the entire body at once.
+		io.Copy(c.Writer, resp.Body)
+	}
 }
