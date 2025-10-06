@@ -43,6 +43,8 @@ export const ModelMappings: React.FC = () => {
 
       if (modelsResponse && Array.isArray(modelsResponse.data)) {
         setModels(modelsResponse.data);
+      } else if (modelsResponse && modelsResponse.data && Array.isArray(modelsResponse.data.items)) {
+        setModels(modelsResponse.data.items);
       } else {
         const errorMsg = 'Models API 响应数据格式不正确: ' + JSON.stringify(modelsResponse);
         console.error(errorMsg);
@@ -51,6 +53,8 @@ export const ModelMappings: React.FC = () => {
 
       if (providersResponse && Array.isArray(providersResponse.data)) {
         setProviders(providersResponse.data);
+      } else if (providersResponse && providersResponse.data && Array.isArray(providersResponse.data.items)) {
+        setProviders(providersResponse.data.items);
       } else {
         const errorMsg = 'Providers API (in ModelMappings) 响应数据格式不正确: ' + JSON.stringify(providersResponse);
         console.error(errorMsg);
