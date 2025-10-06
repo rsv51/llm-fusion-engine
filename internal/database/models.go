@@ -38,13 +38,12 @@ type ProxyKey struct {
 // Group represents a collection of provider configurations for routing.
 type Group struct {
 	BaseModel
-	Name              string     `gorm:"uniqueIndex;not null" json:"name"`
-	Enabled           bool       `gorm:"default:true" json:"enabled"`
-	Priority          int        `gorm:"default:0" json:"priority"`
-	Models            string     `gorm:"type:text" json:"models"` // JSON array of supported models
-	ModelAliases      string     `gorm:"type:text" json:"modelAliases"` // JSON object for model name mapping
-	LoadBalancePolicy string     `gorm:"default:'failover'" json:"loadBalancePolicy"` // e.g., failover, round_robin, weighted
-	Providers         []Provider `json:"providers"`                                   // Has-many relationship
+	Name              string `gorm:"uniqueIndex;not null" json:"name"`
+	Enabled           bool   `gorm:"default:true" json:"enabled"`
+	Priority          int    `gorm:"default:0" json:"priority"`
+	Models            string `gorm:"type:text" json:"models"` // JSON array of supported models
+	ModelAliases      string `gorm:"type:text" json:"modelAliases"` // JSON object for model name mapping
+	LoadBalancePolicy string `gorm:"default:'failover'" json:"loadBalancePolicy"` // e.g., failover, round_robin, weighted
 }
 
 // Provider holds the configuration for a specific LLM provider.
