@@ -21,18 +21,19 @@ func NewKeyHandler(db *gorm.DB) *KeyHandler {
 
 // CreateKey creates a new API key.
 func (h *KeyHandler) CreateKey(c *gin.Context) {
-	var key database.ApiKey
-	if err := c.ShouldBindJSON(&key); err != nil {
+	var req struct {
+		Key        string `json:"key"`
+		ProviderID uint   `json:"providerId"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	// Set default values
-	if key.GroupID == 0 {
-		key.GroupID = 1 // Default group
-	}
-	if !key.Enabled {
-		key.Enabled = true
+	key := database.ApiKey{
+		Key:        req.Key,
+		ProviderID: req.ProviderID,
+		IsHealthy:  true,
 	}
 
 	if err := h.db.Create(&key).Error; err != nil {
