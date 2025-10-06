@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react'
+import { Link } from 'react-router-dom';
 import { Card, Badge } from '../components/ui'
 import { logsApi } from '../services'
 import type { Log } from '../types'
@@ -115,7 +116,9 @@ export const Logs: React.FC = () => {
                 logs.map((log) => (
                   <tr key={log.id} className="border-b border-gray-100 hover:bg-gray-50">
                     <td className="px-4 py-3 text-sm text-gray-900">
-                      {formatDate(log.timestamp)}
+                      <Link to={`/logs/${log.id}`} className="text-blue-600 hover:underline">
+                        {formatDate(log.timestamp)}
+                      </Link>
                     </td>
                     <td className="px-4 py-3 text-sm text-gray-900">{log.model}</td>
                     <td className="px-4 py-3 text-sm text-gray-600">{log.provider}</td>

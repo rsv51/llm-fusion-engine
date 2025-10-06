@@ -169,12 +169,16 @@ func (h *ModelProviderMappingHandler) GetModelProviderMappings(c *gin.Context) {
 	var mappings []database.ModelProviderMapping
 	var total int64
 
-	if err := h.db.Model(&database.ModelProviderMapping{}).Count(&total).Error; err != nil {
+	query := h.db.Model(&database.ModelProviderMapping{})
+
+	// Count total records
+	if err := query.Count(&total).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to count model provider mappings"})
 		return
 	}
 
-	if err := h.db.Offset(offset).Limit(pageSize).Preload("Model").Preload("Provider").Find(&mappings).Error; err != nil {
+	// Get paginated records
+	if err := query.Offset(offset).Limit(pageSize).Preload("Model").Preload("Provider").Find(&mappings).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve model provider mappings"})
 		return
 	}
@@ -234,82 +238,96 @@ func (h *ModelProviderMappingHandler) DeleteModelProviderMapping(c *gin.Context)
 // GetMappingHealthStatus retrieves the recent health status for a model-provider mapping.
 func (h *ModelProviderMappingHandler) GetMappingHealthStatus(c *gin.Context) {
 	id := c.Param("id")
-	
+
 	var mapping database.ModelProviderMapping
-	if err := h.db.First(&mapping, id).Error; err != nil {
+	if err := h.db.Preload("Provider").Preload("Model").First(&mapping, id).Error; err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Model provider mapping not found"})
 		return
 	}
 
-	// Get the last 10 request logs for this mapping
-	var logs []database.Log
-	err := h.db.Where("provider = ? AND model = ?", mapping.Provider.Name, mapping.ProviderModel).
-		Order("timestamp DESC").
-		Limit(10).
-		Find(&logs).Error
-	
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve health status"})
-		return
+	// Define a struct to hold the aggregation results
+	type HealthStats struct {
+		TotalRequests   int64   `json:"totalRequests"`
+		Successful      int64   `json:"successful"`
+		AverageLatency  float64 `json:"averageLatency"`
 	}
 
-	// Process logs to create health status array
-	healthStatus := make([]gin.H, 0, len(logs))
-	for _, log := range logs {
-		status := "success"
-		if log.ResponseStatus >= 400 {
-			status = "error"
-		}
-		healthStatus = append(healthStatus, gin.H{
-			"timestamp":  log.Timestamp,
-			"status":     status,
-			"statusCode": log.ResponseStatus,
-			"latencyMs":  log.Latency,
-		})
+	var stats HealthStats
+	
+	// Query the last 20 logs for this specific mapping to calculate health
+	h.db.Model(&database.Log{}).
+		Select("count(*) as total_requests, sum(case when is_success = 1 then 1 else 0 end) as successful, avg(latency) as average_latency").
+		Where("provider = ? AND model = ?", mapping.Provider.Name, mapping.ProviderModel).
+		Order("timestamp DESC").
+		Limit(20).
+		Scan(&stats)
+
+	var successRate float64
+	if stats.TotalRequests > 0 {
+		successRate = (float64(stats.Successful) / float64(stats.TotalRequests)) * 100
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"mappingId":    mapping.ID,
-		"healthStatus": healthStatus,
+		"mappingId":      mapping.ID,
+		"totalRequests":  stats.TotalRequests,
+		"successRate":    successRate,
+		"averageLatency": stats.AverageLatency,
 	})
 }
 
-// GetAllMappingsHealthStatus retrieves health status for all mappings.
+// GetAllMappingsHealthStatus retrieves aggregated health status for all mappings.
 func (h *ModelProviderMappingHandler) GetAllMappingsHealthStatus(c *gin.Context) {
-	var mappings []database.ModelProviderMapping
-	if err := h.db.Find(&mappings).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve mappings"})
-		return
+	type MappingHealthStats struct {
+		MappingID        uint    `json:"mappingId"`
+		TotalRequests    int64   `json:"totalRequests"`
+		SuccessRate      float64 `json:"successRate"`
+		AverageLatency   float64 `json:"averageLatency"`
 	}
 
-	result := make(map[uint][]gin.H)
+	// This query is more complex. It calculates stats for each provider/model pair from the logs.
+	var results []struct {
+		Provider         string
+		Model            string
+		TotalRequests    int64
+		Successful       int64
+		AverageLatency   float64
+	}
 	
-	for _, mapping := range mappings {
-		var logs []database.Log
-		err := h.db.Where("provider = ? AND model = ?", mapping.Provider.Name, mapping.ProviderModel).
-			Order("timestamp DESC").
-			Limit(10).
-			Find(&logs).Error
-		
-		if err != nil {
-			continue
-		}
+	// We get the stats for all provider/model pairs found in the logs
+	h.db.Model(&database.Log{}).
+		Select("provider, model, count(*) as total_requests, sum(case when is_success = 1 then 1 else 0 end) as successful, avg(latency) as average_latency").
+		Group("provider, model").
+		Scan(&results)
 
-		healthStatus := make([]gin.H, 0, len(logs))
-		for _, log := range logs {
-			status := "success"
-			if log.ResponseStatus >= 400 {
-				status = "error"
-			}
-			healthStatus = append(healthStatus, gin.H{
-				"timestamp":  log.Timestamp,
-				"status":     status,
-				"statusCode": log.ResponseStatus,
-			})
+	// Now, we need to map these stats back to our ModelProviderMapping IDs
+	var mappings []database.ModelProviderMapping
+	h.db.Preload("Provider").Find(&mappings)
+
+	statsMap := make(map[string]MappingHealthStats)
+	for _, r := range results {
+		key := r.Provider + "::" + r.Model
+		var successRate float64
+		if r.TotalRequests > 0 {
+			successRate = (float64(r.Successful) / float64(r.TotalRequests)) * 100
 		}
-		
-		result[mapping.ID] = healthStatus
+		statsMap[key] = MappingHealthStats{
+			TotalRequests:  r.TotalRequests,
+			SuccessRate:    successRate,
+			AverageLatency: r.AverageLatency,
+		}
 	}
 
-	c.JSON(http.StatusOK, result)
+	finalResult := make(map[uint]MappingHealthStats)
+	for _, m := range mappings {
+		key := m.Provider.Name + "::" + m.ProviderModel
+		if stats, ok := statsMap[key]; ok {
+			stats.MappingID = m.ID
+			finalResult[m.ID] = stats
+		} else {
+			// If no logs found for this mapping, return zero stats
+			finalResult[m.ID] = MappingHealthStats{MappingID: m.ID}
+		}
+	}
+
+	c.JSON(http.StatusOK, finalResult)
 }

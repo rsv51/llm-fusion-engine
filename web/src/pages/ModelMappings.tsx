@@ -2,13 +2,14 @@ import React, { useState, useEffect } from 'react';
 import { Plus, Edit2, Trash2, Search, Filter } from 'lucide-react';
 import { Card, Button, Input, Modal, Badge, Select } from '../components/ui';
 import { api, modelsApi } from '../services';
-import type { ModelProviderMapping, Provider, Model } from '../types';
+import type { ModelProviderMapping, Provider, Model, PaginationResponse } from '../types';
 
 export const ModelMappings: React.FC = () => {
   const [mappings, setMappings] = useState<ModelProviderMapping[]>([]);
   const [models, setModels] = useState<Model[]>([]);
   const [providers, setProviders] = useState<Provider[]>([]);
   const [loading, setLoading] = useState(true);
+  const [pagination, setPagination] = useState({ page: 1, pageSize: 20, total: 0, totalPage: 1 });
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingMapping, setEditingMapping] = useState<ModelProviderMapping | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -36,47 +37,20 @@ export const ModelMappings: React.FC = () => {
     return null;
   };
 
-  const loadData = async () => {
-    setError(null); // 清除之前的错误
+  const loadData = async (page = 1, pageSize = 20) => {
+    setError(null);
+    setLoading(true);
     try {
-      setLoading(true);
-      // api.get() 已经返回了 response.data
       const [mappingsResponse, modelsResponse, providersResponse] = await Promise.all([
-        api.get<any>('/admin/model-provider-mappings'),
-        api.get<any>('/admin/models'),
-        api.get<any>('/admin/providers'),
-      ]) as [any, any, any];
-      console.log('ModelProviderMappings API Response:', mappingsResponse); // 添加日志
-      console.log('Models API Response:', modelsResponse); // 添加日志
-      console.log('Providers API Response in ModelMappings:', providersResponse); // 添加日志
+        api.get<PaginationResponse<ModelProviderMapping>>('/admin/model-provider-mappings', { params: { page, pageSize } }),
+        api.get<PaginationResponse<Model>>('/admin/models', { params: { page: 1, pageSize: 1000 } }), // Load all models for dropdown
+        api.get<PaginationResponse<Provider>>('/admin/providers', { params: { page: 1, pageSize: 1000 } }), // Load all providers for dropdown
+      ]);
 
-      // 安全地检查和设置数据
-      const mappingsList = pickList(mappingsResponse);
-      if (mappingsList) {
-        setMappings(mappingsList);
-      } else {
-        const errorMsg = 'ModelProviderMappings API 响应数据格式不正确: ' + JSON.stringify(mappingsResponse);
-        console.error(errorMsg);
-        setError(errorMsg);
-      }
-
-      const modelsList = pickList(modelsResponse);
-      if (modelsList) {
-        setModels(modelsList);
-      } else {
-        const errorMsg = 'Models API 响应数据格式不正确: ' + JSON.stringify(modelsResponse);
-        console.error(errorMsg);
-        setError(errorMsg);
-      }
-
-      const providersList = pickList(providersResponse);
-      if (providersList) {
-        setProviders(providersList);
-      } else {
-        const errorMsg = 'Providers API (in ModelMappings) 响应数据格式不正确: ' + JSON.stringify(providersResponse);
-        console.error(errorMsg);
-        setError(errorMsg);
-      }
+      setMappings(mappingsResponse.data.data);
+      setPagination(mappingsResponse.data.pagination);
+      setModels(modelsResponse.data.data);
+      setProviders(providersResponse.data.data);
     } catch (error: any) {
       console.error('加载数据失败:', error);
       setError(error.message || JSON.stringify(error));
@@ -139,6 +113,10 @@ export const ModelMappings: React.FC = () => {
       mapping.providerModel?.toLowerCase().includes(query)
     ));
   }, [mappings, searchQuery]);
+
+  const handlePageChange = (newPage: number) => {
+    loadData(newPage, pagination.pageSize);
+  };
 
   return (
     <div className="space-y-6">
@@ -253,6 +231,25 @@ export const ModelMappings: React.FC = () => {
             </div>
           )}
         </>
+      )}
+
+      {pagination.totalPage > 1 && (
+        <div className="flex items-center justify-between mt-4">
+          <div className="text-sm text-gray-700">
+            共 {pagination.total} 条记录
+          </div>
+          <div className="flex gap-2">
+            <Button onClick={() => handlePageChange(pagination.page - 1)} disabled={pagination.page <= 1}>
+              上一页
+            </Button>
+            <span className="px-3 py-1 text-sm text-gray-700">
+              第 {pagination.page} / {pagination.totalPage} 页
+            </span>
+            <Button onClick={() => handlePageChange(pagination.page + 1)} disabled={pagination.page >= pagination.totalPage}>
+              下一页
+            </Button>
+          </div>
+        </div>
       )}
 
       <ModelMappingModal

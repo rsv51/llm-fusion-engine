@@ -1,7 +1,7 @@
 import React, { useState } from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { Sidebar, Header } from './components/layout'
-import { Dashboard, ProxyKeys, Logs, Models, Settings, Providers, LoginPage } from './pages'
+import { Dashboard, ProxyKeys, Logs, Models, Settings, Providers, LoginPage, LogDetail } from './pages'
 import { ModelMappings } from './pages/ModelMappings'
 import { ImportExport } from './pages/ImportExport'
 
@@ -37,6 +37,7 @@ export const App: React.FC = () => {
                   <Route path="/proxy-keys" element={<ProxyKeys />} />
                   <Route path="/models" element={<Models />} />
                   <Route path="/logs" element={<Logs />} />
+                  <Route path="/logs/:id" element={<LogDetail />} />
                   <Route path="/settings" element={<Settings />} />
                   <Route path="/providers" element={<Providers />} />
                   <Route path="/model-mappings" element={<ModelMappings />} />

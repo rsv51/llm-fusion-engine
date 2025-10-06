@@ -14,6 +14,11 @@ export const logsApi = {
     return api.get('/admin/logs', { params })
   },
 
+  // 获取单条日志
+  async getLog(id: string): Promise<Log> {
+    return api.get(`/admin/logs/${id}`);
+  },
+
   // 获取日志统计
   async getLogStats(hours: number = 24): Promise<LogStats> {
     return api.get('/admin/logs/stats', { params: { hours } })

@@ -8,6 +8,7 @@ import { modelsApi } from '../services/models'
 export const Providers: React.FC = () => {
   const [providers, setProviders] = useState<Provider[]>([])
   const [loading, setLoading] = useState(true)
+  const [pagination, setPagination] = useState({ page: 1, pageSize: 20, total: 0, totalPage: 1 })
   const [searchQuery, setSearchQuery] = useState('')
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [editingProvider, setEditingProvider] = useState<Provider | null>(null)
@@ -21,28 +22,22 @@ export const Providers: React.FC = () => {
     loadProviders()
   }, [])
 
-  const loadProviders = async () => {
-    setError(null); // 清除之前的错误
+  const loadProviders = async (page = 1, pageSize = 20) => {
+    setError(null);
+    setLoading(true);
     try {
-      setLoading(true)
-      // api.get() 已经返回了 response.data，所以 response 就是后端返回的完整响应
-      const response = await api.get<any>('/admin/providers')
-      console.log('Providers API Response:', response) // 添加日志
-      // 尝试安全地访问数据，后端返回格式为 { data: [...], pagination: {...} }
-      if (response && Array.isArray(response.data)) {
-        setProviders(response.data);
-      } else {
-        const errorMsg = 'API 响应数据格式不正确: ' + JSON.stringify(response);
-        console.error(errorMsg);
-        setError(errorMsg);
-      }
+      const response = await api.get<PaginationResponse<Provider>>('/admin/providers', {
+        params: { page, pageSize },
+      });
+      setProviders(response.data.data);
+      setPagination(response.data.pagination);
     } catch (error: any) {
-      console.error('加载供应商失败:', error)
+      console.error('加载供应商失败:', error);
       setError(error.message || JSON.stringify(error));
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   const handleCreate = () => {
     setEditingProvider(null)
@@ -83,13 +78,16 @@ export const Providers: React.FC = () => {
 
   const filteredProviders = React.useMemo(() => {
     if (!searchQuery.trim()) return providers;
-    
     const query = searchQuery.toLowerCase();
     return providers.filter(provider =>
       provider?.name?.toLowerCase().includes(query) ||
       provider?.type?.toLowerCase().includes(query)
     );
   }, [providers, searchQuery]);
+
+  const handlePageChange = (newPage: number) => {
+    loadProviders(newPage, pagination.pageSize);
+  };
 
   const handleCheckHealth = async (id: number) => {
     try {
@@ -311,6 +309,25 @@ export const Providers: React.FC = () => {
             </div>
           )}
         </>
+      )}
+
+      {pagination.totalPage > 1 && (
+        <div className="flex items-center justify-between mt-4">
+          <div className="text-sm text-gray-700">
+            共 {pagination.total} 条记录
+          </div>
+          <div className="flex gap-2">
+            <Button onClick={() => handlePageChange(pagination.page - 1)} disabled={pagination.page <= 1}>
+              上一页
+            </Button>
+            <span className="px-3 py-1 text-sm text-gray-700">
+              第 {pagination.page} / {pagination.totalPage} 页
+            </span>
+            <Button onClick={() => handlePageChange(pagination.page + 1)} disabled={pagination.page >= pagination.totalPage}>
+              下一页
+            </Button>
+          </div>
+        </div>
       )}
 
       <ProviderModal
