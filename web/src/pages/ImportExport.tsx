@@ -116,9 +116,12 @@ export const ImportExport: React.FC = () => {
         headers: {
           'Content-Type': 'multipart/form-data'
         }
-      })
+      }) as unknown as ImportResult
       
-      setImportResult(response.data)
+      console.log('Import Response:', response)
+      console.log('Import Result Summary:', response?.result?.summary)
+      
+      setImportResult(response)
       setShowResultModal(true)
     } catch (error: any) {
       console.error('导入失败:', error)
