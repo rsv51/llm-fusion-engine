@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Edit2, Trash2, Search } from 'lucide-react';
-import { Card, Button, Input, Modal, Badge } from '../components/ui';
-import { api } from '../services';
+import { Plus, Edit2, Trash2, Search, Filter } from 'lucide-react';
+import { Card, Button, Input, Modal, Badge, Select } from '../components/ui';
+import { api, modelsApi } from '../services';
 import type { ModelProviderMapping, Provider, Model } from '../types';
 
 export const ModelMappings: React.FC = () => {
@@ -13,6 +13,9 @@ export const ModelMappings: React.FC = () => {
   const [editingMapping, setEditingMapping] = useState<ModelProviderMapping | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [selectedProviderId, setSelectedProviderId] = useState<number | ''>('');
+  const [providerModels, setProviderModels] = useState<string[]>([]);
+  const [loadingProviderModels, setLoadingProviderModels] = useState(false);
 
   useEffect(() => {
     loadData();
@@ -292,25 +295,14 @@ const ModelMappingModal: React.FC<ModelMappingModalProps> = ({ isOpen, onClose, 
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">模型</label>
-          <select
-            value={formData.modelId || ''}
-            onChange={(e) => setFormData({ ...formData, modelId: parseInt(e.target.value) })}
-            className="w-full p-2 border rounded"
-            required
-          >
-            {models.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
-          </select>
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">提供商</label>
-          <select
-            value={formData.providerId || ''}
-            onChange={(e) => setFormData({ ...formData, providerId: parseInt(e.target.value) })}
-            className="w-full p-2 border rounded"
-            required
-          >
-            {providers.map(p => <option key={p.id} value={p.id}>{p.name} ({p.type})</option>)}
-          </select>
+          <ModelSelector
+            models={models}
+            providers={providers}
+            selectedProviderId={formData.providerId || ''}
+            onProviderChange={(providerId) => setFormData({ ...formData, providerId: providerId || 0 })}
+            onModelSelect={(model) => setFormData({ ...formData, modelId: model.id })}
+            selectedModel={models.find(m => m.id === formData.modelId)}
+          />
         </div>
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">提供商模型名称</label>
@@ -378,6 +370,81 @@ const ModelMappingModal: React.FC<ModelMappingModalProps> = ({ isOpen, onClose, 
         </div>
       </form>
     </Modal>
+  );
+};
+
+// 模型选择器组件 - 用于按供应商筛选模型
+const ModelSelector: React.FC<{
+  models: Model[];
+  providers: Provider[];
+  selectedProviderId: number | '';
+  onProviderChange: (providerId: number | '') => void;
+  onModelSelect: (model: Model) => void;
+  selectedModel?: Model | null;
+}> = ({ models, providers, selectedProviderId, onProviderChange, onModelSelect, selectedModel }) => {
+  const [filteredModels, setFilteredModels] = useState<Model[]>([]);
+  
+  // 当选择的供应商变化时，筛选对应的模型
+  useEffect(() => {
+    if (selectedProviderId === '') {
+      // 如果没有选择供应商，显示所有模型
+      setFilteredModels(models);
+    } else {
+      // 根据选择的供应商筛选模型
+      const provider = providers.find(p => p.id === selectedProviderId);
+      if (provider) {
+        // 筛选与该供应商相关的模型
+        const relatedModels = models.filter(model => {
+          // 筛选与当前供应商类型相关的模型
+          // 这里可以根据实际业务逻辑调整，比如根据模型名称或其他特征判断
+          // 暂时显示所有模型，实际应根据业务需求调整
+          return true;
+        });
+        setFilteredModels(relatedModels);
+      } else {
+        setFilteredModels([]);
+      }
+    }
+  }, [selectedProviderId, models, providers]);
+
+  return (
+    <div className="space-y-4">
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-2">按供应商筛选</label>
+        <Select
+          value={selectedProviderId}
+          onChange={(e) => onProviderChange(e.target.value === '' ? '' : parseInt(e.target.value))}
+          options={[
+            { value: '', label: '所有供应商' },
+            ...providers.map(p => ({ value: p.id, label: `${p.name} (${p.type})` }))
+          ]}
+        />
+      </div>
+      
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-2">选择模型</label>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2 max-h-60 overflow-y-auto p-1 border rounded">
+          {filteredModels.length > 0 ? (
+            filteredModels.map(model => (
+              <div
+                key={model.id}
+                className={`p-2 border rounded cursor-pointer hover:bg-gray-50 transition-colors ${
+                  selectedModel?.id === model.id ? 'bg-blue-50 border-blue-500' : 'border-gray-200'
+                }`}
+                onClick={() => onModelSelect(model)}
+              >
+                <div className="font-medium text-sm">{model.name}</div>
+                <div className="text-xs text-gray-500">{model.remark || '无备注'}</div>
+              </div>
+            ))
+          ) : (
+            <div className="col-span-full text-center py-4 text-gray-500">
+              没有找到相关模型
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
   );
 };
 

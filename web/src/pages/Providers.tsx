@@ -103,7 +103,8 @@ export const Providers: React.FC = () => {
   const handleGetModels = async (provider: Provider) => {
     try {
       setSelectedProvider(provider)
-      const response = await modelsApi.getProviderModels(provider.id)
+      // 传入 provider.type，确保后端按实际供应商类型返回模型列表
+      const response = await modelsApi.getProviderModels(provider.id, provider.type)
       setProviderModels({
         providerId: provider.id,
         models: response.models,

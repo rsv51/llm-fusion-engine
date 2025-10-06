@@ -80,9 +80,10 @@ export const modelsApi = {
     return api.get(`/admin/model-provider-mappings/${id}/status`, { params: { limit } })
   },
 
-  // 获取提供商可用模型列表
-  async getProviderModels(providerId: number): Promise<ProviderModelsResponse> {
-    return api.get(`/admin/providers/${providerId}/models`)
+  // 获取提供商可用模型列表(可带类型,提高后端判定准确性)
+  async getProviderModels(providerId: number, providerType?: string): Promise<ProviderModelsResponse> {
+    const params = providerType ? { type: providerType } : undefined
+    return api.get(`/admin/providers/${providerId}/models`, { params })
   },
 
   // 从提供商导入模型
