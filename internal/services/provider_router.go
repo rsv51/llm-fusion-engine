@@ -5,9 +5,7 @@ import (
 	"errors"
 	"llm-fusion-engine/internal/core"
 	"llm-fusion-engine/internal/database"
-	"math/rand"
 	"sort"
-	"strings"
 	"time"
 
 	"gorm.io/gorm"
@@ -27,197 +25,64 @@ func NewProviderRouter(db *gorm.DB, keyManager core.IKeyManager) *ProviderRouter
 	}
 }
 
-// RouteRequestAsync selects a provider group based on the model, proxy key, and other strategies.
-func (r *ProviderRouter) RouteRequestAsync(model, proxyKey string, excludedGroups []string) (*core.ProviderRouteResult, error) {
+// RouteRequestAsync selects a provider based on model mappings and performs failover.
+func (r *ProviderRouter) RouteRequestAsync(model, proxyKey string, excludedProviders []uint) (*core.ProviderRouteResult, error) {
 	// 1. Validate proxy key
-	validatedProxyKey, err := r.keyManager.ValidateProxyKeyAsync(proxyKey)
+	_, err := r.keyManager.ValidateProxyKeyAsync(proxyKey)
 	if err != nil {
 		return nil, errors.New("invalid proxy key")
 	}
 
-	// 2. Try to resolve the model using the new ModelProviderMapping table
-	var mapping database.ModelProviderMapping
-	err = r.db.Where("model_id IN (SELECT id FROM models WHERE name = ?)", model).Preload("Provider").First(&mapping).Error
-	if err == nil {
-		// Mapping found, route directly to the specified provider
-		provider := &mapping.Provider
-		apiKey, keyErr := r.keyManager.GetNextKeyAsync(provider.ID)
-		if keyErr != nil {
-			return nil, errors.New("no available API key for the mapped provider")
-		}
-		return &core.ProviderRouteResult{
-			Group:         nil, // No group context when using direct mapping
-			Provider:      provider,
-			ApiKey:        apiKey,
-			ResolvedModel: mapping.ProviderModel,
-		}, nil
+	// 2. Find all candidate providers via ModelProviderMapping
+	var mappings []database.ModelProviderMapping
+	query := r.db.Joins("JOIN models ON models.id = model_provider_mappings.model_id").
+		Where("models.name = ?", model).
+		Preload("Provider")
+
+	if len(excludedProviders) > 0 {
+		query = query.Where("provider_id NOT IN ?", excludedProviders)
 	}
 
-	// 3. If no mapping is found, fall back to the group-based routing
-	candidateGroups, err := r.findCandidateGroups(model, validatedProxyKey, excludedGroups)
-	if err != nil || len(candidateGroups) == 0 {
-		return nil, errors.New("no available provider group found for the given model")
+	if err := query.Find(&mappings).Error; err != nil || len(mappings) == 0 {
+		return nil, errors.New("no provider mapping found for the given model")
 	}
 
-	// 4. Select a group based on the load balancing policy
-	selectedGroup, err := r.selectGroup(candidateGroups, validatedProxyKey)
-	if err != nil {
-		return nil, err
-	}
-
-	// 5. Get the next available API key for the selected group
-	apiKey, err := r.keyManager.GetNextKeyAsync(selectedGroup.ID)
-	if err != nil {
-		return nil, errors.New("no available API key in the selected group")
-	}
-
-	return &core.ProviderRouteResult{
-		Group:         selectedGroup,
-		ApiKey:        apiKey,
-		ResolvedModel: model, // No alias resolution needed here anymore
-	}, nil
-}
-
-// findCandidateGroups finds all groups that can handle the request.
-func (r *ProviderRouter) findCandidateGroups(model string, proxyKey *database.ProxyKey, excludedGroups []string) ([]*database.Group, error) {
-	var groups []*database.Group
-	query := r.db.Where("enabled = ?", true)
-
-	// Exclude already attempted groups
-	if len(excludedGroups) > 0 {
-		query = query.Where("name NOT IN ?", excludedGroups)
-	}
-
-	// Filter by groups allowed by the proxy key
-	if proxyKey != nil && proxyKey.AllowedGroups != "" {
-		var allowedGroupIDs []uint
-		if err := json.Unmarshal([]byte(proxyKey.AllowedGroups), &allowedGroupIDs); err == nil {
-			query = query.Where("id IN ?", allowedGroupIDs)
-		}
-	}
-
-	if err := query.Find(&groups).Error; err != nil {
-		return nil, err
-	}
-
-	// Filter groups that support the model
-	var candidateGroups []*database.Group
-	for _, group := range groups {
-		var supportedModels []string
-		if err := json.Unmarshal([]byte(group.Models), &supportedModels); err != nil {
-			continue // Skip group if models JSON is invalid
-		}
-
-		isSupported := false
-		for _, m := range supportedModels {
-			if m == model {
-				isSupported = true
-				break
-			}
-		}
-
-		if isSupported {
-			candidateGroups = append(candidateGroups, group)
-		}
-	}
-
-	return candidateGroups, nil
-}
-
-// selectGroup applies the load balancing policy to choose a group.
-func (r *ProviderRouter) selectGroup(groups []*database.Group, proxyKey *database.ProxyKey) (*database.Group, error) {
-	if len(groups) == 0 {
-		return nil, errors.New("no candidate groups to select from")
-	}
-
-	policy := "failover" // default policy
-	if proxyKey != nil && proxyKey.GroupBalancePolicy != "" {
-		policy = proxyKey.GroupBalancePolicy
-	}
-
-	switch strings.ToLower(policy) {
-	case "round_robin":
-		// TODO: Implement round-robin logic (requires state/cache)
-		return groups[0], nil // Placeholder
-	case "weighted":
-		return r.selectByWeightedRandom(groups, proxyKey)
-	case "random":
-		return groups[rand.Intn(len(groups))], nil
-	case "failover":
-		fallthrough
-	default:
-		return r.selectByFailover(groups)
-	}
-}
-
-// selectByFailover selects the group with the highest priority.
-func (r *ProviderRouter) selectByFailover(groups []*database.Group) (*database.Group, error) {
-	sort.Slice(groups, func(i, j int) bool {
-		return groups[i].Priority > groups[j].Priority
+	// 3. Sort providers by priority (for failover)
+	sort.Slice(mappings, func(i, j int) bool {
+		// Higher priority value means it comes first
+		return mappings[i].Provider.Priority > mappings[j].Provider.Priority
 	})
-	return groups[0], nil
-}
 
-// selectByWeightedRandom selects a group based on weights.
-func (r *ProviderRouter) selectByWeightedRandom(groups []*database.Group, proxyKey *database.ProxyKey) (*database.Group, error) {
-	if len(groups) == 0 {
-		return nil, errors.New("no groups to select from")
+	// 4. Iterate through sorted providers and try to get a key (this is the failover mechanism)
+	for _, mapping := range mappings {
+		provider := &mapping.Provider
+
+		// Try to get a key for this provider
+		var apiKey string
+		var keyErr error
+		if km, ok := r.keyManager.(*KeyManager); ok {
+			apiKey, keyErr = km.GetNextKeyForProviderAsync(provider.ID)
+		} else {
+			keyErr = errors.New("key manager does not support direct provider key retrieval")
+		}
+
+		if keyErr == nil {
+			// Success! We found a working provider and key.
+			return &core.ProviderRouteResult{
+				Group:         nil, // No group context when using direct mapping
+				Provider:      provider,
+				ApiKey:        apiKey,
+				ResolvedModel: mapping.ProviderModel,
+			}, nil
+		}
+		// If getting a key fails, the loop will continue to the next provider with lower priority.
 	}
 
-	// Parse group weights from proxy key if available
-	var groupWeights map[string]int
-	if proxyKey != nil && proxyKey.GroupWeights != "" {
-		if err := json.Unmarshal([]byte(proxyKey.GroupWeights), &groupWeights); err != nil {
-			// If parsing fails, fall back to failover
-			return r.selectByFailover(groups)
-		}
-	}
-
-	// Build weighted list
-	type weightedGroup struct {
-		group  *database.Group
-		weight int
-	}
-	
-	var weightedGroups []weightedGroup
-	totalWeight := 0
-	
-	for _, group := range groups {
-		weight := 1 // Default weight
-		
-		// Check if custom weight is defined for this group
-		if groupWeights != nil {
-			if customWeight, exists := groupWeights[group.Name]; exists && customWeight > 0 {
-				weight = customWeight
-			}
-		}
-		
-		weightedGroups = append(weightedGroups, weightedGroup{
-			group:  group,
-			weight: weight,
-		})
-		totalWeight += weight
-	}
-	
-	if totalWeight == 0 {
-		return r.selectByFailover(groups)
-	}
-	
-	// Select randomly based on weights
-	randomValue := rand.Intn(totalWeight)
-	currentSum := 0
-	
-	for _, wg := range weightedGroups {
-		currentSum += wg.weight
-		if randomValue < currentSum {
-			return wg.group, nil
-		}
-	}
-	
-	// Fallback (should not reach here)
-	return weightedGroups[0].group, nil
+	// 5. If the loop completes, it means no provider in the mapping had a working key
+	return nil, errors.New("no available API key for any of the mapped providers")
 }
 
 func init() {
-	rand.Seed(time.Now().UnixNano())
+	// rand.Seed is no longer needed as rand is not used
+	// rand.Seed(time.Now().UnixNano())
 }

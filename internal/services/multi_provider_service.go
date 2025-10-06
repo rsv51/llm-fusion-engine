@@ -68,6 +68,13 @@ func (s *MultiProviderService) ProcessChatCompletionHttpAsync(
 	// 4. Modify the request with the resolved model
 	requestBody["model"] = routeResult.ResolvedModel
 
+	// Clean up "[undefined]" values sent by some clients
+	for key, value := range requestBody {
+		if strVal, ok := value.(string); ok && strVal == "[undefined]" {
+			delete(requestBody, key)
+		}
+	}
+
 	// 5. Construct the full API endpoint URL
 	// Most providers use /v1/chat/completions endpoint
 	apiEndpoint := baseUrl
