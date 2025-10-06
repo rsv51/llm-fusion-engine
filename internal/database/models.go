@@ -56,6 +56,7 @@ type Provider struct {
 	Config       string `gorm:"type:text" json:"config"`       // JSON string for provider-specific settings (e.g., API key, base URL)
 	Console      string `gorm:"type:varchar(255)" json:"console"` // Optional console URL for the provider
 	Enabled      bool   `gorm:"default:true" json:"enabled"`
+	Priority     int    `gorm:"default:0" json:"priority"` // For failover sorting
 	Weight       uint   `gorm:"default:1" json:"weight"` // For load balancing if used directly
 	HealthStatus string `gorm:"default:'unknown'" json:"healthStatus"` // healthy/unhealthy/unknown
 	LastChecked  *time.Time `json:"lastChecked"`

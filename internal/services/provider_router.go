@@ -1,12 +1,10 @@
 package services
 
 import (
-	"encoding/json"
 	"errors"
 	"llm-fusion-engine/internal/core"
 	"llm-fusion-engine/internal/database"
 	"sort"
-	"time"
 
 	"gorm.io/gorm"
 )
@@ -84,5 +82,4 @@ func (r *ProviderRouter) RouteRequestAsync(model, proxyKey string, excludedProvi
 
 func init() {
 	// rand.Seed is no longer needed as rand is not used
-	// rand.Seed(time.Now().UnixNano())
 }
