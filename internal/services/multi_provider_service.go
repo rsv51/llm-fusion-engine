@@ -154,34 +154,38 @@ func getRequestURL(providerType, baseUrl string) (string, error) {
 		return "", errors.New("baseUrl is not configured for the provider")
 	}
 
-	// Normalize base URL by removing any trailing slashes
+	// Normalize base URL
 	baseUrl = strings.TrimSuffix(baseUrl, "/")
 
-	// Determine the API path based on provider type
-	var apiPath string
+	// Determine the standard suffix for the given provider type
+	var fullPath string
+	var pathAfterV1 string
+
 	switch strings.ToLower(providerType) {
 	case "anthropic":
-		apiPath = "/v1/messages"
+		fullPath = "/v1/messages"
+		pathAfterV1 = "/messages"
 	case "gemini":
-		// This is a simplification. A real Gemini adapter would be more complex.
-		apiPath = "/v1beta/models/gemini-pro:generateContent"
+		fullPath = "/v1beta/models/gemini-pro:generateContent"
+		// Gemini is special, doesn't follow /v1 pattern, so just append
+		return baseUrl + fullPath, nil
 	default:
-		// Default to OpenAI-compatible path for "openai", "azure", "openrouter", etc., and unknown types.
-		apiPath = "/v1/chat/completions"
+		fullPath = "/v1/chat/completions"
+		pathAfterV1 = "/chat/completions"
 	}
 
-	// Smartly combine baseUrl and apiPath
-	// If baseUrl already ends with the path, don't append it again.
-	if strings.HasSuffix(baseUrl, apiPath) {
+	// Case 1: URL is already complete
+	if strings.HasSuffix(baseUrl, fullPath) {
 		return baseUrl, nil
 	}
 
-	// If baseUrl contains a different /v1/ path, it's likely a custom endpoint. Trust it.
-	if strings.Contains(baseUrl, "/v1/") && !strings.HasSuffix(baseUrl, apiPath) {
-		return baseUrl, nil
+	// Case 2: URL ends with /v1
+	if strings.HasSuffix(baseUrl, "/v1") {
+		return baseUrl + pathAfterV1, nil
 	}
-	
-	return baseUrl + apiPath, nil
+
+	// Case 3: Bare domain or other path
+	return baseUrl + fullPath, nil
 }
 
 // LogRequest logs the details of an API request and its response.
