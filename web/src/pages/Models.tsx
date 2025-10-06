@@ -120,7 +120,7 @@ export const Models: React.FC = () => {
                     </div>
                     <div>
                       <h3 className="font-semibold text-gray-900">{model.name}</h3>
-                      <p className="text-sm text-gray-500">{model.provider}</p>
+                      <p className="text-sm text-gray-500">{model.remark || '无备注'}</p>
                     </div>
                   </div>
                   <Badge variant={model.enabled ? 'success' : 'default'}>
@@ -177,7 +177,7 @@ const ModelModal: React.FC<ModelModalProps> = ({ isOpen, onClose, onSubmit, mode
     if (model) {
       setFormData(model)
     } else {
-      setFormData({ name: '', provider: '', enabled: true, category: '', maxTokens: 0 })
+      setFormData({ name: '', remark: '', maxRetry: 3, timeout: 30, enabled: true })
     }
   }, [model])
 
@@ -189,29 +189,39 @@ const ModelModal: React.FC<ModelModalProps> = ({ isOpen, onClose, onSubmit, mode
   return (
     <Modal isOpen={isOpen} onClose={onClose} title={model ? '编辑模型' : '新建模型'}>
       <form onSubmit={handleSubmit} className="space-y-4">
-        <Input
-          label="模型名称"
-          value={formData.name}
-          onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-          required
-        />
-        <Input
-          label="供应商"
-          value={formData.provider}
-          onChange={(e) => setFormData({ ...formData, provider: e.target.value })}
-          required
-        />
-        <Input
-          label="分类"
-          value={formData.category}
-          onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-        />
-        <Input
-          label="最大Token数"
-          type="number"
-          value={formData.maxTokens}
-          onChange={(e) => setFormData({ ...formData, maxTokens: parseInt(e.target.value) })}
-        />
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">模型名称</label>
+          <Input
+            value={formData.name || ''}
+            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+            required
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">备注</label>
+          <Input
+            value={formData.remark || ''}
+            onChange={(e) => setFormData({ ...formData, remark: e.target.value })}
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">最大重试次数</label>
+          <Input
+            type="number"
+            value={formData.maxRetry || 0}
+            onChange={(e) => setFormData({ ...formData, maxRetry: parseInt(e.target.value) || 0 })}
+            min="0"
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">超时时间（秒）</label>
+          <Input
+            type="number"
+            value={formData.timeout || 0}
+            onChange={(e) => setFormData({ ...formData, timeout: parseInt(e.target.value) || 0 })}
+            min="1"
+          />
+        </div>
         <div className="flex items-center gap-2">
           <input
             type="checkbox"

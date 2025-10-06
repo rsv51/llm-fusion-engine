@@ -5,15 +5,29 @@ import type {
   Model,
   CreateModelRequest,
   UpdateModelRequest,
-  ModelProviderAssociation,
-  CreateAssociationRequest,
-  UpdateAssociationRequest,
-  ProviderModelsResponse,
-  ImportModelsRequest,
-  ImportModelsResponse,
+  ModelProviderMapping,
+  CreateModelProviderMappingRequest,
+  UpdateModelProviderMappingRequest,
   PaginationResponse,
   PaginationParams,
 } from '../types'
+
+// 定义额外的类型
+export interface ProviderModelsResponse {
+  models: string[];
+  providerName: string;
+}
+
+export interface ImportModelsRequest {
+  providerId: number;
+  modelNames: string[];
+}
+
+export interface ImportModelsResponse {
+  success: boolean;
+  message: string;
+  importedCount: number;
+}
 
 export const modelsApi = {
   // 获取模型列表
@@ -42,18 +56,18 @@ export const modelsApi = {
   },
 
   // 获取模型-提供商关联列表
-  async getAssociations(params?: { modelId?: number; providerId?: number }): Promise<ModelProviderAssociation[]> {
-    return api.get('/admin/model-providers', { params })
+  async getAssociations(params?: { modelId?: number; providerId?: number }): Promise<ModelProviderMapping[]> {
+    return api.get('/admin/model-provider-mappings', { params })
   },
 
   // 创建关联
-  async createAssociation(data: CreateAssociationRequest): Promise<ModelProviderAssociation> {
-    return api.post('/admin/model-providers', data)
+  async createAssociation(data: CreateModelProviderMappingRequest): Promise<ModelProviderMapping> {
+    return api.post('/admin/model-provider-mappings', data)
   },
 
   // 更新关联
-  async updateAssociation(id: number, data: UpdateAssociationRequest): Promise<ModelProviderAssociation> {
-    return api.patch(`/admin/model-providers/${id}`, data)
+  async updateAssociation(id: number, data: UpdateModelProviderMappingRequest): Promise<ModelProviderMapping> {
+    return api.patch(`/admin/model-provider-mappings/${id}`, data)
   },
 
   // 删除关联
@@ -63,7 +77,7 @@ export const modelsApi = {
 
   // 获取关联状态历史
   async getAssociationStatus(id: number, limit?: number): Promise<{ statusHistory: boolean[] }> {
-    return api.get(`/admin/model-providers/${id}/status`, { params: { limit } })
+    return api.get(`/admin/model-provider-mappings/${id}/status`, { params: { limit } })
   },
 
   // 获取提供商可用模型列表
