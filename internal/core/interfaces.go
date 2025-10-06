@@ -26,6 +26,7 @@ type IProviderRouter interface {
 type IKeyManager interface {
 	// ValidateProxyKeyAsync checks if a proxy key is valid and returns it.
 	ValidateProxyKeyAsync(proxyKey string) (*database.ProxyKey, error)
+	UpdateLogTokens(requestID string, promptTokens, completionTokens, totalTokens int)
 }
 
 // IProvider represents a specific LLM provider (e.g., OpenAI, Anthropic).
@@ -42,10 +43,12 @@ type IProviderFactory interface {
 // IMultiProviderService coordinates the routing and execution of requests.
 type IMultiProviderService interface {
 	ProcessChatCompletionHttpAsync(
+		c *gin.Context,
 		requestBody map[string]interface{},
 		proxyKey string,
 	) (*http.Response, error)
 	LogRequest(
+		requestID string,
 		requestBody map[string]interface{},
 		proxyKey string,
 		providerName string,
@@ -53,5 +56,8 @@ type IMultiProviderService interface {
 		response *http.Response,
 		isSuccess bool,
 		latency time.Duration,
+		promptTokens int,
+		completionTokens int,
+		totalTokens int,
 	)
 }

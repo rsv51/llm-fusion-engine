@@ -74,17 +74,20 @@ type ApiKey struct {
 
 // Log records API request details for monitoring and analytics.
 type Log struct {
-	ID             string    `gorm:"primary_key" json:"id"`
-	ProxyKey       string    `gorm:"index" json:"proxy_key"`
-	Model          string    `gorm:"index" json:"model"`
-	Provider       string    `gorm:"index" json:"provider"`
-	RequestURL     string    `json:"request_url"`
-	RequestBody    string    `json:"request_body"`
-	ResponseBody   string    `json:"response_body"`
-	ResponseStatus int       `gorm:"index" json:"response_status"`
-	IsSuccess      bool      `json:"is_success"`
-	Latency        int64     `json:"latency"` // in milliseconds
-	Timestamp      time.Time `gorm:"index" json:"timestamp"`
+	ID               string    `gorm:"primary_key" json:"id"`
+	ProxyKey         string    `gorm:"index" json:"proxy_key"`
+	Model            string    `gorm:"index" json:"model"`
+	Provider         string    `gorm:"index" json:"provider"`
+	RequestURL       string    `json:"request_url"`
+	RequestBody      string    `json:"request_body"`
+	ResponseBody     string    `json:"response_body"`
+	ResponseStatus   int       `gorm:"index" json:"response_status"`
+	IsSuccess        bool      `json:"is_success"`
+	Latency          int64     `json:"latency"` // in milliseconds
+	Timestamp        time.Time `gorm:"index" json:"timestamp"`
+	PromptTokens     int       `json:"prompt_tokens"`
+	CompletionTokens int       `json:"completion_tokens"`
+	TotalTokens      int       `json:"total_tokens"`
 }
 
 // Model represents a user-friendly definition of a model with common configurations.

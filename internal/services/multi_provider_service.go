@@ -34,6 +34,7 @@ func NewMultiProviderService(router core.IProviderRouter, factory core.IProvider
 
 // ProcessChatCompletionHttpAsync handles the chat completion request.
 func (s *MultiProviderService) ProcessChatCompletionHttpAsync(
+	c *gin.Context,
 	requestBody map[string]interface{},
 	proxyKey string,
 ) (*http.Response, error) {
@@ -102,18 +103,29 @@ func (s *MultiProviderService) ProcessChatCompletionHttpAsync(
 
 		if err != nil {
 			lastErr = err
-			s.LogRequest(requestBody, proxyKey, provider.Name, apiEndpoint, nil, false, latency)
+			// Create a unique request ID for logging
+			requestID := uuid.New().String()
+			c.Set("requestID", requestID) // Store it in context for later use
+			s.LogRequest(requestID, requestBody, proxyKey, provider.Name, apiEndpoint, nil, false, latency, 0, 0, 0)
 			continue // Retry with the next provider
 		}
 
+		// For logging, we need to read the body and then replace it.
+		// This logic is now centralized within the LogRequest function.
+		// We pass a placeholder for token usage for now, which will be updated.
 		if resp.StatusCode >= 200 && resp.StatusCode < 300 {
-			s.LogRequest(requestBody, proxyKey, provider.Name, apiEndpoint, resp, true, latency)
+			// We will parse the body for tokens later
+			requestID := uuid.New().String()
+			c.Set("requestID", requestID)
+			s.LogRequest(requestID, requestBody, proxyKey, provider.Name, apiEndpoint, resp, true, latency, 0, 0, 0)
 			return resp, nil // Success
 		}
 
 		// Handle non-2xx responses
-		s.LogRequest(requestBody, proxyKey, provider.Name, apiEndpoint, resp, false, latency)
-		resp.Body.Close() // Close body to allow for reuse of connection
+		requestID := uuid.New().String()
+		c.Set("requestID", requestID)
+		s.LogRequest(requestID, requestBody, proxyKey, provider.Name, apiEndpoint, resp, false, latency, 0, 0, 0)
+		// The original response body is closed within LogRequest, so we don't do it here.
 
 		// Decide if we should retry
 		shouldRetry := false
@@ -190,6 +202,7 @@ func getRequestURL(providerType, baseUrl string) (string, error) {
 
 // LogRequest logs the details of an API request and its response.
 func (s *MultiProviderService) LogRequest(
+	requestID string,
 	requestBody map[string]interface{},
 	proxyKey string,
 	providerName string,
@@ -197,6 +210,9 @@ func (s *MultiProviderService) LogRequest(
 	response *http.Response,
 	isSuccess bool,
 	latency time.Duration,
+	promptTokens int,
+	completionTokens int,
+	totalTokens int,
 ) {
 	reqBodyBytes, _ := json.Marshal(requestBody)
 	var respBodyBytes []byte
@@ -211,17 +227,20 @@ func (s *MultiProviderService) LogRequest(
 	}
 
 	logEntry := database.Log{
-		ID:             uuid.New().String(),
-		ProxyKey:       proxyKey,
-		Model:          requestBody["model"].(string),
-		Provider:       providerName,
-		RequestURL:     requestUrl,
-		RequestBody:    string(reqBodyBytes),
-		ResponseBody:   string(respBodyBytes),
-		ResponseStatus: status,
-		IsSuccess:      isSuccess,
-		Latency:        latency.Milliseconds(),
-		Timestamp:      time.Now(),
+		ID:               requestID,
+		ProxyKey:         proxyKey,
+		Model:            requestBody["model"].(string),
+		Provider:         providerName,
+		RequestURL:       requestUrl,
+		RequestBody:      string(reqBodyBytes),
+		ResponseBody:     string(respBodyBytes),
+		ResponseStatus:   status,
+		IsSuccess:        isSuccess,
+		Latency:          latency.Milliseconds(),
+		Timestamp:        time.Now(),
+		PromptTokens:     promptTokens,
+		CompletionTokens: completionTokens,
+		TotalTokens:      totalTokens,
 	}
 
 	s.db.Create(&logEntry)

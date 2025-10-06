@@ -24,3 +24,12 @@ func (km *KeyManager) ValidateProxyKeyAsync(proxyKey string) (*database.ProxyKey
 	}
 	return &key, nil
 }
+
+// UpdateLogTokens updates an existing log entry with token usage data.
+func (km *KeyManager) UpdateLogTokens(requestID string, promptTokens, completionTokens, totalTokens int) {
+	km.db.Model(&database.Log{}).Where("id = ?", requestID).Updates(database.Log{
+		PromptTokens:     promptTokens,
+		CompletionTokens: completionTokens,
+		TotalTokens:      totalTokens,
+	})
+}

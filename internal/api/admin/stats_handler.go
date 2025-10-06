@@ -49,18 +49,24 @@ func (h *StatsHandler) GetStats(c *gin.Context) {
 
 	// Get provider-specific stats
 	type ProviderStatsResult struct {
-		Provider        string  `json:"provider"`
-		RequestCount    int64   `json:"requestCount"`
-		SuccessCount    int64   `json:"successCount"`
-		ErrorCount      int64   `json:"errorCount"`
-		AvgResponseTime float64 `json:"avgResponseTimeMs"`
+		Provider         string  `json:"provider"`
+		RequestCount     int64   `json:"requestCount"`
+		SuccessCount     int64   `json:"successCount"`
+		ErrorCount       int64   `json:"errorCount"`
+		AvgResponseTime  float64 `json:"avgResponseTimeMs"`
+		TotalTokens      int64   `json:"totalTokens"`
+		PromptTokens     int64   `json:"promptTokens"`
+		CompletionTokens int64   `json:"completionTokens"`
 	}
 	var providerStats []ProviderStatsResult
 	h.db.Model(&database.Log{}).
 		Select("provider, COUNT(*) as request_count, "+
 			"SUM(CASE WHEN response_status >= 200 AND response_status < 300 THEN 1 ELSE 0 END) as success_count, "+
 			"SUM(CASE WHEN response_status >= 400 THEN 1 ELSE 0 END) as error_count, "+
-			"AVG(latency) as avg_response_time").
+			"AVG(latency) as avg_response_time, "+
+			"SUM(total_tokens) as total_tokens, "+
+			"SUM(prompt_tokens) as prompt_tokens, "+
+			"SUM(completion_tokens) as completion_tokens").
 		Where("timestamp > ?", since).
 		Group("provider").
 		Scan(&providerStats)

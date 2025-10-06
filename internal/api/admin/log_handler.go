@@ -45,10 +45,10 @@ func (h *LogHandler) GetLogs(c *gin.Context) {
 	}
 	if status := c.Query("status"); status != "" {
 		statusCode, _ := strconv.Atoi(status)
-		query = query.Where("status_code = ?", statusCode)
+		query = query.Where("response_status = ?", statusCode)
 	}
-	if groupID := c.Query("group_id"); groupID != "" {
-		query = query.Where("group_id = ?", groupID)
+	if provider := c.Query("provider"); provider != "" {
+		query = query.Where("provider = ?", provider)
 	}
 	
 	// Count total records
