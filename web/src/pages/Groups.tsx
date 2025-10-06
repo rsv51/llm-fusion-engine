@@ -59,7 +59,7 @@ export const Groups: React.FC = () => {
           alert('分组名称不能为空')
           return
         }
-        await groupsApi.createGroup({ name: formData.name, ...formData })
+        await groupsApi.createGroup(formData as any)
       }
       setIsModalOpen(false)
       await loadGroups()
@@ -271,11 +271,10 @@ const GroupModal: React.FC<GroupModalProps> = ({ isOpen, onClose, onSubmit, grou
     const aliasEntries = Object.entries(aliases) as [string, string][]
 
     const handleAliasChange = (index: number, key: string, value: string) => {
-      const newAliases = { ...aliases }
-      const oldKey = aliasEntries[index][0]
-      delete newAliases[oldKey]
-      newAliases[key] = value
-      setFormData({ ...formData, modelAliases: newAliases })
+      const newAliasEntries = [...aliasEntries];
+      newAliasEntries[index] = [key, value];
+      const newAliases = Object.fromEntries(newAliasEntries);
+      setFormData({ ...formData, modelAliases: newAliases });
     }
 
     const addAlias = () => {
@@ -332,16 +331,18 @@ const GroupModal: React.FC<GroupModalProps> = ({ isOpen, onClose, onSubmit, grou
           >
             通用设置
           </button>
-          <button
-            onClick={() => setActiveTab('aliases')}
-            className={`whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm ${
-              activeTab === 'aliases'
-                ? 'border-blue-500 text-blue-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-            }`}
-          >
-            模型映射
-          </button>
+          {group && (
+            <button
+              onClick={() => setActiveTab('aliases')}
+              className={`whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm ${
+                activeTab === 'aliases'
+                  ? 'border-blue-500 text-blue-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              模型映射
+            </button>
+          )}
         </nav>
       </div>
 
