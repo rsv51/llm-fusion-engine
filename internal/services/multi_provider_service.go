@@ -77,20 +77,13 @@ func (s *MultiProviderService) ProcessChatCompletionHttpAsync(
 	}
 
 	// 5. Construct the full API endpoint URL
-	// Construct the full API endpoint URL
+	// Construct the full API endpoint URL based on the provider type
 	var apiEndpoint string
-	if chatEndpoint, ok := config["chatEndpoint"].(string); ok && chatEndpoint != "" {
-		// If a specific chatEndpoint is defined, use it.
-		apiEndpoint = baseUrl
-		if strings.HasSuffix(apiEndpoint, "/") {
-			apiEndpoint = apiEndpoint[:len(apiEndpoint)-1]
-		}
-		if !strings.HasPrefix(chatEndpoint, "/") {
-			chatEndpoint = "/" + chatEndpoint
-		}
-		apiEndpoint += chatEndpoint
-	} else {
-		// Otherwise, use the baseUrl, but only append the default path if the baseUrl doesn't already have a path.
+	providerType := strings.ToLower(provider.Type)
+
+	switch providerType {
+	case "openai", "azure", "openrouter", "groq", "deepseek":
+		// For OpenAI-compatible providers, append the standard path if the baseUrl is a root domain
 		apiEndpoint = baseUrl
 		parsedUrl, err := url.Parse(apiEndpoint)
 		if err == nil && (parsedUrl.Path == "" || parsedUrl.Path == "/") {
@@ -99,6 +92,10 @@ func (s *MultiProviderService) ProcessChatCompletionHttpAsync(
 			}
 			apiEndpoint += "v1/chat/completions"
 		}
+	default:
+		// For any other provider type, or if the type is not set,
+		// assume the baseUrl is the full, final API endpoint.
+		apiEndpoint = baseUrl
 	}
 
 	// 6. Create request body
