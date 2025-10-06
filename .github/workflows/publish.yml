@@ -29,3 +29,4 @@ jobs:
           context: .
           push: true
           tags: ghcr.io/${{ github.repository_owner }}/llm-fusion-engine:latest
+          no-cache: true
