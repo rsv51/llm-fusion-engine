@@ -470,10 +470,10 @@ func (h *ImportHandler) processModelProviderMappingsSheet(f *excelize.File, shee
 			ModelID:          model.ID,
 			ProviderID:       provider.ID,
 			ProviderModel:    row[providerModelIdx],
-			ToolCall:         toolCall,
-			StructuredOutput: structuredOutput,
-			Image:            image,
-			Weight:           uint(weight),
+			ToolCall:         &toolCall,
+			StructuredOutput: &structuredOutput,
+			Image:            &image,
+			Weight:           weight,
 			Enabled:          enabled,
 		}
 
