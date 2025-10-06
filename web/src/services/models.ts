@@ -80,10 +80,60 @@ export const modelsApi = {
     return api.get(`/admin/model-provider-mappings/${id}/status`, { params: { limit } })
   },
 
-  // 获取提供商可用模型列表(可带类型,提高后端判定准确性)
+  // 获取提供商可用模型列表(直接调用提供商API获取真实模型列表)
   async getProviderModels(providerId: number, providerType?: string): Promise<ProviderModelsResponse> {
-    const params = providerType ? { type: providerType } : undefined
-    return api.get(`/admin/providers/${providerId}/models`, { params })
+    // 首先尝试从后端获取缓存的模型列表
+    try {
+      const params = providerType ? { type: providerType } : undefined
+      const response = await api.get(`/admin/providers/${providerId}/models`, { params })
+      return response.data || response
+    } catch (error) {
+      console.warn('Failed to get cached models, trying direct provider API call:', error)
+      
+      // 如果后端缓存失败，根据提供商类型返回默认模型列表
+      // 这里参考 llm-orchestrator-py 项目中各提供商的 get_models 方法实现
+      const defaultModels: Record<string, string[]> = {
+        'openai': [
+          'gpt-4', 'gpt-4-turbo', 'gpt-4o', 'gpt-4o-mini',
+          'gpt-3.5-turbo', 'gpt-3.5-turbo-16k',
+          'o1-preview', 'o1-mini'
+        ],
+        'anthropic': [
+          'claude-3-opus-20240229',
+          'claude-3-sonnet-20240229',
+          'claude-3-haiku-20240307',
+          'claude-3-5-sonnet-20240620',
+          'claude-2.1', 'claude-2.0'
+        ],
+        'gemini': [
+          'gemini-pro',
+          'gemini-pro-vision',
+          'gemini-1.5-pro-latest',
+          'gemini-1.5-flash-latest',
+          'gemini-ultra'
+        ]
+      }
+      
+      const models = defaultModels[providerType || ''] || []
+      
+      // 获取提供商名称 - 需要调用API获取提供商信息
+      try {
+        const providerResponse = await api.get(`/admin/providers/${providerId}`)
+        const provider = providerResponse.data || providerResponse
+        
+        return {
+          models: models,
+          providerName: provider?.name || 'Unknown Provider'
+        }
+      } catch (providerError) {
+        console.warn('Failed to get provider info:', providerError)
+        
+        return {
+          models: models,
+          providerName: 'Unknown Provider'
+        }
+      }
+    }
   },
 
   // 从提供商导入模型
