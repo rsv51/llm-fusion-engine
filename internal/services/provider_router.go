@@ -35,9 +35,9 @@ func (r *ProviderRouter) RouteRequestAsync(model, proxyKey string, excludedGroup
 		return nil, errors.New("invalid proxy key")
 	}
 
-	// 2. Try to resolve the model using the new ModelMapping table
-	var mapping database.ModelMapping
-	err = r.db.Where("user_friendly_name = ?", model).Preload("Provider").First(&mapping).Error
+	// 2. Try to resolve the model using the new ModelProviderMapping table
+	var mapping database.ModelProviderMapping
+	err = r.db.Where("model_id IN (SELECT id FROM models WHERE name = ?)", model).Preload("Provider").First(&mapping).Error
 	if err == nil {
 		// Mapping found, route directly to the specified provider
 		provider := &mapping.Provider
@@ -49,7 +49,7 @@ func (r *ProviderRouter) RouteRequestAsync(model, proxyKey string, excludedGroup
 			Group:         nil, // No group context when using direct mapping
 			Provider:      provider,
 			ApiKey:        apiKey,
-			ResolvedModel: mapping.ProviderModelName,
+			ResolvedModel: mapping.ProviderModel,
 		}, nil
 	}
 

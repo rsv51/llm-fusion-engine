@@ -1,6 +1,7 @@
 package services
 
 import (
+	"encoding/json"
 	"llm-fusion-engine/internal/database"
 	"net/http"
 	"time"
@@ -26,9 +27,24 @@ func (hc *HealthChecker) CheckProvider(providerID uint) (*database.Provider, err
 	}
 
 	// 模拟健康检查逻辑
-	// 在实际应用中,这里应该向 provider.BaseURL 发送一个测试请求
+	// 从 provider.Config 中解析 BaseURL
+	var config map[string]interface{}
+	if err := json.Unmarshal([]byte(provider.Config), &config); err != nil {
+		provider.HealthStatus = "unhealthy"
+		hc.db.Save(&provider)
+		return &provider, nil
+	}
+
+	baseURL, ok := config["baseUrl"].(string)
+	if !ok {
+		provider.HealthStatus = "unhealthy"
+		hc.db.Save(&provider)
+		return &provider, nil
+	}
+
+	// 向 provider 的 BaseURL 发送一个测试请求
 	startTime := time.Now()
-	resp, err := http.Get(provider.BaseURL)
+	resp, err := http.Get(baseURL)
 	latency := time.Since(startTime)
 
 	now := time.Now()
