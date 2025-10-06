@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Plus, Edit2, Trash2, Search } from 'lucide-react';
 import { Card, Button, Input, Modal, Badge } from '../components/ui';
 import { api } from '../services';
-import type { ModelProviderMapping, Provider, Model, PaginationResponse } from '../types';
+import type { ModelProviderMapping, Provider, Model } from '../types';
 
 export const ModelMappings: React.FC = () => {
   const [mappings, setMappings] = useState<ModelProviderMapping[]>([]);
@@ -17,6 +17,19 @@ export const ModelMappings: React.FC = () => {
   useEffect(() => {
     loadData();
   }, []);
+
+  // 统一提取列表数据,兼容多种后端返回格式:
+  // - 直接数组: [...]
+  // - 顶层 items: { items: [...] }
+  // - data: 数组: { data: [...] }
+  // - data.items: { data: { items: [...] } }
+  const pickList = (resp: any) => {
+    if (Array.isArray(resp)) return resp;
+    if (resp && Array.isArray(resp.data)) return resp.data;
+    if (resp && Array.isArray(resp.items)) return resp.items;
+    if (resp && resp.data && Array.isArray(resp.data.items)) return resp.data.items;
+    return null;
+  };
 
   const loadData = async () => {
     setError(null); // 清除之前的错误
@@ -33,32 +46,27 @@ export const ModelMappings: React.FC = () => {
       console.log('Providers API Response in ModelMappings:', providersResponse); // 添加日志
 
       // 安全地检查和设置数据
-      if (mappingsResponse && Array.isArray(mappingsResponse.data)) {
-        setMappings(mappingsResponse.data);
+      const mappingsList = pickList(mappingsResponse);
+      if (mappingsList) {
+        setMappings(mappingsList);
       } else {
         const errorMsg = 'ModelProviderMappings API 响应数据格式不正确: ' + JSON.stringify(mappingsResponse);
         console.error(errorMsg);
         setError(errorMsg);
       }
 
-      if (modelsResponse && Array.isArray(modelsResponse.data)) {
-        setModels(modelsResponse.data);
-      } else if (modelsResponse && Array.isArray(modelsResponse.items)) {
-        setModels(modelsResponse.items);
-      } else if (modelsResponse && modelsResponse.data && Array.isArray(modelsResponse.data.items)) {
-        setModels(modelsResponse.data.items);
+      const modelsList = pickList(modelsResponse);
+      if (modelsList) {
+        setModels(modelsList);
       } else {
         const errorMsg = 'Models API 响应数据格式不正确: ' + JSON.stringify(modelsResponse);
         console.error(errorMsg);
         setError(errorMsg);
       }
 
-      if (providersResponse && Array.isArray(providersResponse.data)) {
-        setProviders(providersResponse.data);
-      } else if (providersResponse && Array.isArray(providersResponse.items)) {
-        setProviders(providersResponse.items);
-      } else if (providersResponse && providersResponse.data && Array.isArray(providersResponse.data.items)) {
-        setProviders(providersResponse.data.items);
+      const providersList = pickList(providersResponse);
+      if (providersList) {
+        setProviders(providersList);
       } else {
         const errorMsg = 'Providers API (in ModelMappings) 响应数据格式不正确: ' + JSON.stringify(providersResponse);
         console.error(errorMsg);
