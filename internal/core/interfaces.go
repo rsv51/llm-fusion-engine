@@ -4,6 +4,8 @@ import (
 	"llm-fusion-engine/internal/database"
 	"net/http"
 	"time"
+
+	"github.com/gin-gonic/gin"
 )
 
 // ProviderRouteResult defines the result of a routing decision.
