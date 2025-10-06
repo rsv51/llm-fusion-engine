@@ -59,7 +59,10 @@ export const Groups: React.FC = () => {
           alert('分组名称不能为空')
           return
         }
-        await groupsApi.createGroup(formData as any)
+        const { name, description, enabled } = formData
+        if (name) {
+          await groupsApi.createGroup({ name, description, enabled })
+        }
       }
       setIsModalOpen(false)
       await loadGroups()
