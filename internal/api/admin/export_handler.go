@@ -1,14 +1,12 @@
 package admin
 
 import (
-	"encoding/json"
 	"fmt"
 	"net/http"
 	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/xuri/excelize/v2"
-	"gopkg.in/yaml.v2"
 	"gorm.io/gorm"
 	"llm-fusion-engine/internal/database"
 )
@@ -23,18 +21,9 @@ func NewExportHandler(db *gorm.DB) *ExportHandler {
 	return &ExportHandler{db: db}
 }
 
-// ExportAll exports all settings to a JSON, YAML or Excel file.
+// ExportAll exports all settings to an Excel file.
 func (h *ExportHandler) ExportAll(c *gin.Context) {
-	format := c.DefaultQuery("format", "json")
-	
-	switch format {
-	case "excel":
-		h.exportToExcel(c)
-	case "yaml":
-		h.exportToYAML(c)
-	default:
-		h.exportToJSON(c)
-	}
+	h.exportToExcel(c)
 }
 
 // ExportTemplate exports an Excel template with optional sample data
@@ -73,63 +62,6 @@ func (h *ExportHandler) ExportTemplate(c *gin.Context) {
 	}
 }
 
-func (h *ExportHandler) exportToJSON(c *gin.Context) {
-	var migrationData MigrationData
-	var err error
-
-	// Fetch all data
-	if err = h.db.Find(&migrationData.Groups).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve groups"})
-		return
-	}
-	if err = h.db.Find(&migrationData.Providers).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve providers"})
-		return
-	}
-	if err = h.db.Find(&migrationData.ApiKeys).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve api keys"})
-		return
-	}
-	if err = h.db.Find(&migrationData.ModelProviderMappings).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve model provider mappings"})
-		return
-	}
-
-	c.Header("Content-Type", "application/json")
-	c.Header("Content-Disposition", "attachment; filename=llm-fusion-engine-backup.json")
-	if err := json.NewEncoder(c.Writer).Encode(migrationData); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate JSON"})
-	}
-}
-
-func (h *ExportHandler) exportToYAML(c *gin.Context) {
-	var migrationData MigrationData
-	var err error
-
-	// Fetch all data
-	if err = h.db.Find(&migrationData.Groups).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve groups"})
-		return
-	}
-	if err = h.db.Find(&migrationData.Providers).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve providers"})
-		return
-	}
-	if err = h.db.Find(&migrationData.ApiKeys).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve api keys"})
-		return
-	}
-	if err = h.db.Find(&migrationData.ModelProviderMappings).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve model provider mappings"})
-		return
-	}
-
-	c.Header("Content-Type", "application/x-yaml")
-	c.Header("Content-Disposition", "attachment; filename=llm-fusion-engine-backup.yaml")
-	if err := yaml.NewEncoder(c.Writer).Encode(migrationData); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate YAML"})
-	}
-}
 
 func (h *ExportHandler) exportToExcel(c *gin.Context) {
 	f := excelize.NewFile()

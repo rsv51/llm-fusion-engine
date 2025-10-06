@@ -74,7 +74,7 @@ export const ImportExport: React.FC = () => {
   const exportConfig = async () => {
     setIsExporting(true)
     try {
-      const response = await api.get('/api/admin/export/all?format=excel', {
+      const response = await api.get('/api/admin/export/all', {
         responseType: 'blob'
       })
       

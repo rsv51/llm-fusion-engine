@@ -9,7 +9,6 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/xuri/excelize/v2"
-	"gopkg.in/yaml.v2"
 	"gorm.io/gorm"
 	"llm-fusion-engine/internal/database"
 )
@@ -24,7 +23,7 @@ func NewImportHandler(db *gorm.DB) *ImportHandler {
 	return &ImportHandler{db: db}
 }
 
-// ImportAll imports all settings from a JSON, YAML or Excel file.
+// ImportAll imports all settings from an Excel file.
 func (h *ImportHandler) ImportAll(c *gin.Context) {
 	file, err := c.FormFile("file")
 	if err != nil {
@@ -34,8 +33,8 @@ func (h *ImportHandler) ImportAll(c *gin.Context) {
 
 	// Check file extension
 	ext := strings.ToLower(file.Filename[strings.LastIndex(file.Filename, ".")+1:])
-	if ext != "xlsx" && ext != "json" && ext != "yaml" && ext != "yml" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Unsupported file type. Only .xlsx, .json, .yaml, .yml files are supported"})
+	if ext != "xlsx" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Unsupported file type. Only .xlsx files are supported"})
 		return
 	}
 
@@ -46,16 +45,7 @@ func (h *ImportHandler) ImportAll(c *gin.Context) {
 	}
 	defer f.Close()
 
-	switch ext {
-	case "xlsx":
-		h.importFromExcel(c, f, file.Filename)
-	case "json":
-		h.importFromJSON(c, f)
-	case "yaml", "yml":
-		h.importFromYAML(c, f)
-	default:
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Unsupported file type"})
-	}
+	h.importFromExcel(c, f, file.Filename)
 }
 
 // ImportFromExcel imports configuration from Excel file with three-sheet structure
@@ -101,88 +91,6 @@ func (h *ImportHandler) importFromExcel(c *gin.Context, f interface{}, filename 
 	c.JSON(http.StatusOK, result)
 }
 
-func (h *ImportHandler) importFromJSON(c *gin.Context, f interface{}) {
-	var migrationData MigrationData
-	
-	var err error
-	switch v := f.(type) {
-	case interface{ Read([]byte) (int, error) }:
-		err = json.NewDecoder(v.(interface{ Read([]byte) (int, error) })).Decode(&migrationData)
-	default:
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid file reader"})
-		return
-	}
-
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid JSON format"})
-		return
-	}
-
-	err = h.db.Transaction(func(tx *gorm.DB) error {
-		return h.importMigrationData(tx, migrationData)
-	})
-
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to import data: " + err.Error()})
-		return
-	}
-
-	c.JSON(http.StatusOK, gin.H{"message": "Import successful"})
-}
-
-func (h *ImportHandler) importFromYAML(c *gin.Context, f interface{}) {
-	var migrationData MigrationData
-	
-	var err error
-	switch v := f.(type) {
-	case interface{ Read([]byte) (int, error) }:
-		err = yaml.NewDecoder(v.(interface{ Read([]byte) (int, error) })).Decode(&migrationData)
-	default:
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid file reader"})
-		return
-	}
-
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid YAML format"})
-		return
-	}
-
-	err = h.db.Transaction(func(tx *gorm.DB) error {
-		return h.importMigrationData(tx, migrationData)
-	})
-
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to import data: " + err.Error()})
-		return
-	}
-
-	c.JSON(http.StatusOK, gin.H{"message": "Import successful"})
-}
-
-func (h *ImportHandler) importMigrationData(tx *gorm.DB, data MigrationData) error {
-	// Clear existing data
-	if err := tx.Exec("DELETE FROM model_provider_mappings").Error; err != nil { return err }
-	if err := tx.Exec("DELETE FROM models").Error; err != nil { return err }
-	if err := tx.Exec("DELETE FROM api_keys").Error; err != nil { return err }
-	if err := tx.Exec("DELETE FROM providers").Error; err != nil { return err }
-	if err := tx.Exec("DELETE FROM groups").Error; err != nil { return err }
-
-	// Import new data
-	if len(data.Groups) > 0 {
-		if err := tx.Create(&data.Groups).Error; err != nil { return err }
-	}
-	if len(data.Providers) > 0 {
-		if err := tx.Create(&data.Providers).Error; err != nil { return err }
-	}
-	if len(data.ApiKeys) > 0 {
-		if err := tx.Create(&data.ApiKeys).Error; err != nil { return err }
-	}
-	if len(data.ModelProviderMappings) > 0 {
-		if err := tx.Create(&data.ModelProviderMappings).Error; err != nil { return err }
-	}
-
-	return nil
-}
 
 func (h *ImportHandler) processExcelImport(f *excelize.File) gin.H {
 	result := gin.H{
