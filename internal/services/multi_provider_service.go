@@ -176,44 +176,46 @@ func getRequestURL(providerType, baseUrl string) (string, error) {
 		// For unknown types, assume OpenAI compatibility as a default.
 		// This is more user-friendly than just returning the base URL.
 		return baseUrl + "/v1/chat/completions", nil
-	// LogRequest logs the details of an API request and its response.
-	func (s *MultiProviderService) LogRequest(
-		requestBody map[string]interface{},
-		proxyKey string,
-		providerName string,
-		requestUrl string,
-		response *http.Response,
-		isSuccess bool,
-		latency time.Duration,
-	) {
-		reqBodyBytes, _ := json.Marshal(requestBody)
-		var respBodyBytes []byte
-		var status int
-	
-		if response != nil {
-			status = response.StatusCode
-			// Read and then replace the body to allow it to be read again
-			respBodyBytes, _ = ioutil.ReadAll(response.Body)
-			response.Body.Close() // Close the original body
-			response.Body = ioutil.NopCloser(bytes.NewBuffer(respBodyBytes))
-		}
-	
-		logEntry := database.Log{
-			ID:             uuid.New().String(),
-			ProxyKey:       proxyKey,
-			Model:          requestBody["model"].(string),
-			Provider:       providerName,
-			RequestURL:     requestUrl,
-			RequestBody:    string(reqBodyBytes),
-			ResponseBody:   string(respBodyBytes),
-			ResponseStatus: status,
-			IsSuccess:      isSuccess,
-			Latency:        latency.Milliseconds(),
-			Timestamp:      time.Now(),
-		}
-	
-		s.db.Create(&logEntry)
 	}
+}
+
+// LogRequest logs the details of an API request and its response.
+func (s *MultiProviderService) LogRequest(
+	requestBody map[string]interface{},
+	proxyKey string,
+	providerName string,
+	requestUrl string,
+	response *http.Response,
+	isSuccess bool,
+	latency time.Duration,
+) {
+	reqBodyBytes, _ := json.Marshal(requestBody)
+	var respBodyBytes []byte
+	var status int
+
+	if response != nil {
+		status = response.StatusCode
+		// Read and then replace the body to allow it to be read again
+		respBodyBytes, _ = ioutil.ReadAll(response.Body)
+		response.Body.Close() // Close the original body
+		response.Body = ioutil.NopCloser(bytes.NewBuffer(respBodyBytes))
+	}
+
+	logEntry := database.Log{
+		ID:             uuid.New().String(),
+		ProxyKey:       proxyKey,
+		Model:          requestBody["model"].(string),
+		Provider:       providerName,
+		RequestURL:     requestUrl,
+		RequestBody:    string(reqBodyBytes),
+		ResponseBody:   string(respBodyBytes),
+		ResponseStatus: status,
+		IsSuccess:      isSuccess,
+		Latency:        latency.Milliseconds(),
+		Timestamp:      time.Now(),
+	}
+
+	s.db.Create(&logEntry)
 }
 
 // cleanupUndefined recursively removes keys with "[undefined]" string values from a map.
