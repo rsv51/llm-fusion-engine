@@ -154,29 +154,34 @@ func getRequestURL(providerType, baseUrl string) (string, error) {
 		return "", errors.New("baseUrl is not configured for the provider")
 	}
 
-	// Ensure baseUrl doesn't have a trailing slash for consistency
+	// Normalize base URL by removing any trailing slashes
 	baseUrl = strings.TrimSuffix(baseUrl, "/")
 
-	// If baseUrl already seems to contain a path, use it directly.
-	// This allows users to specify full endpoints like "https://.../v1/chat/completions".
-	if strings.Contains(baseUrl, "/v1/") {
+	// Determine the API path based on provider type
+	var apiPath string
+	switch strings.ToLower(providerType) {
+	case "anthropic":
+		apiPath = "/v1/messages"
+	case "gemini":
+		// This is a simplification. A real Gemini adapter would be more complex.
+		apiPath = "/v1beta/models/gemini-pro:generateContent"
+	default:
+		// Default to OpenAI-compatible path for "openai", "azure", "openrouter", etc., and unknown types.
+		apiPath = "/v1/chat/completions"
+	}
+
+	// Smartly combine baseUrl and apiPath
+	// If baseUrl already ends with the path, don't append it again.
+	if strings.HasSuffix(baseUrl, apiPath) {
 		return baseUrl, nil
 	}
 
-	switch strings.ToLower(providerType) {
-	case "openai", "azure", "openrouter", "groq", "deepseek", "openchat", "fireworks", "mistral":
-		return baseUrl + "/v1/chat/completions", nil
-	case "anthropic":
-		return baseUrl + "/v1/messages", nil
-	case "gemini":
-		// Note: Gemini's path depends on the model, which we don't have here.
-		// This is a simplification. A real Gemini adapter would be more complex.
-		return baseUrl + "/v1beta/models/gemini-pro:generateContent", nil
-	default:
-		// For unknown types, assume OpenAI compatibility as a default.
-		// This is more user-friendly than just returning the base URL.
-		return baseUrl + "/v1/chat/completions", nil
+	// If baseUrl contains a different /v1/ path, it's likely a custom endpoint. Trust it.
+	if strings.Contains(baseUrl, "/v1/") && !strings.HasSuffix(baseUrl, apiPath) {
+		return baseUrl, nil
 	}
+	
+	return baseUrl + apiPath, nil
 }
 
 // LogRequest logs the details of an API request and its response.

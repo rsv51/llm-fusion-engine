@@ -58,7 +58,7 @@ func (h *LogHandler) GetLogs(c *gin.Context) {
 	}
 	
 	// Get paginated records, ordered by creation time descending
-	if err := query.Order("created_at DESC").Offset(offset).Limit(pageSize).Find(&logs).Error; err != nil {
+	if err := query.Order("timestamp DESC").Offset(offset).Limit(pageSize).Find(&logs).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve logs"})
 		return
 	}

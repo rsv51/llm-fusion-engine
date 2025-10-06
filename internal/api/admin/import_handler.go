@@ -156,9 +156,10 @@ func (h *ImportHandler) processProvidersSheet(f *excelize.File, sheetName string
 	priorityIdx := findColumnIndex(headers, "priority")
 	weightIdx := findColumnIndex(headers, "weight")
 	enabledIdx := findColumnIndex(headers, "enabled")
+	timeoutIdx := findColumnIndex(headers, "timeout")
 
-	if nameIdx == -1 || typeIdx == -1 || apiKeyIdx == -1 {
-		providersResult["errors"] = append(providersResult["errors"].([]interface{}), gin.H{"row": 1, "field": "headers", "error": "Required columns (name, type, api_key) not found"})
+	if nameIdx == -1 || typeIdx == -1 {
+		providersResult["errors"] = append(providersResult["errors"].([]interface{}), gin.H{"row": 1, "field": "headers", "error": "Required columns (name, type) not found"})
 		return
 	}
 
@@ -185,8 +186,11 @@ func (h *ImportHandler) processProvidersSheet(f *excelize.File, sheetName string
 		}
 
 		// Parse integer values
+		priority := 0
 		if priorityIdx != -1 && len(row) > priorityIdx && row[priorityIdx] != "" {
-			// priority is not used
+			if val, err := strconv.Atoi(row[priorityIdx]); err == nil {
+				priority = val
+			}
 		}
 
 		weight := 100
@@ -196,12 +200,21 @@ func (h *ImportHandler) processProvidersSheet(f *excelize.File, sheetName string
 			}
 		}
 
-	provider := database.Provider{
-		Name:    row[nameIdx],
-		Type:    row[typeIdx],
-		Weight:  uint(weight),
-		Enabled: enabled,
-	}
+		timeout := 300 // Default timeout
+		if timeoutIdx != -1 && len(row) > timeoutIdx && row[timeoutIdx] != "" {
+			if val, err := strconv.Atoi(row[timeoutIdx]); err == nil {
+				timeout = val
+			}
+		}
+
+		provider := database.Provider{
+			Name:     row[nameIdx],
+			Type:     row[typeIdx],
+			Weight:   uint(weight),
+			Enabled:  enabled,
+			Priority: priority,
+			Timeout:  timeout,
+		}
 
 		// Create config JSON with API key and baseURL
 		config := make(map[string]interface{})
