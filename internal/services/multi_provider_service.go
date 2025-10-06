@@ -6,7 +6,6 @@ import (
 	"errors"
 	"llm-fusion-engine/internal/core"
 	"net/http"
-	"net/url"
 	"strings"
 
 	"gorm.io/gorm"
