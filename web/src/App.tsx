@@ -1,7 +1,7 @@
 import React, { useState } from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { Sidebar, Header } from './components/layout'
-import { Dashboard, Groups, Keys, ProxyKeys, Logs, Models, Settings, Providers, LoginPage } from './pages'
+import { Dashboard, ProxyKeys, Logs, Models, Settings, Providers, LoginPage } from './pages'
 import { ModelMappings } from './pages/ModelMappings'
 import { ImportExport } from './pages/ImportExport'
 
@@ -34,8 +34,6 @@ export const App: React.FC = () => {
               <MainLayout>
                 <Routes>
                   <Route path="/dashboard" element={<Dashboard />} />
-                  <Route path="/groups" element={<Groups />} />
-                  <Route path="/keys" element={<Keys />} />
                   <Route path="/proxy-keys" element={<ProxyKeys />} />
                   <Route path="/models" element={<Models />} />
                   <Route path="/logs" element={<Logs />} />
