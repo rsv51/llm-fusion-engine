@@ -26,7 +26,7 @@ interface ImportResult {
         error: string
       }>
     }
-    associations: {
+    modelProviderMappings: {
       total: number
       imported: number
       skipped: number
@@ -204,25 +204,25 @@ export const ImportExport: React.FC = () => {
         )}
       </Card>
 
-      {/* Associations */}
+      {/* Model Provider Mappings */}
       <Card className="p-4">
         <h3 className="font-semibold mb-2 flex items-center">
           <FileText className="w-4 h-4 mr-2" />
-          关联 ({result.associations.imported}/{result.associations.total})
+          模型提供商映射 ({result.modelProviderMappings.imported}/{result.modelProviderMappings.total})
         </h3>
         <div className="text-sm text-gray-600 mb-2">
-          导入: {result.associations.imported}, 跳过: {result.associations.skipped}, 错误: {result.associations.errors.length}
+          导入: {result.modelProviderMappings.imported}, 跳过: {result.modelProviderMappings.skipped}, 错误: {result.modelProviderMappings.errors.length}
         </div>
-        {result.associations.errors.length > 0 && (
+        {result.modelProviderMappings.errors.length > 0 && (
           <div className="space-y-1">
-            {result.associations.errors.slice(0, 5).map((error, index) => (
+            {result.modelProviderMappings.errors.slice(0, 5).map((error, index) => (
               <div key={index} className="text-xs text-red-600 bg-red-50 p-2 rounded">
                 第 {error.row} 行 ({error.field}): {error.error}
               </div>
             ))}
-            {result.associations.errors.length > 5 && (
+            {result.modelProviderMappings.errors.length > 5 && (
               <div className="text-xs text-gray-500">
-                还有 {result.associations.errors.length - 5} 个错误...
+                还有 {result.modelProviderMappings.errors.length - 5} 个错误...
               </div>
             )}
           </div>
@@ -337,7 +337,7 @@ export const ImportExport: React.FC = () => {
             导入说明
           </h3>
           <ul className="text-sm text-blue-800 space-y-1">
-            <li>• Excel文件必须包含三个工作表：Providers、Models、Associations</li>
+            <li>• Excel文件必须包含三个工作表：Providers、Models、ModelProviderMappings</li>
             <li>• 系统会自动跳过重复的数据（按名称去重）</li>
             <li>• 建议先下载模板，按格式填写数据</li>
             <li>• 导入前建议先导出当前配置作为备份</li>

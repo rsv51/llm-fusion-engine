@@ -214,8 +214,8 @@ func (h *ImportHandler) processExcelImport(f *excelize.File) gin.H {
 		h.processModelsSheet(f, "Models", result)
 	}
 
-	if sheetExists("Associations") {
-		h.processAssociationsSheet(f, "Associations", result)
+	if sheetExists("ModelProviderMappings") {
+		h.processModelProviderMappingsSheet(f, "ModelProviderMappings", result)
 	}
 
 	// Calculate summary
@@ -383,7 +383,7 @@ func (h *ImportHandler) processModelsSheet(f *excelize.File, sheetName string, r
 	}
 }
 
-func (h *ImportHandler) processAssociationsSheet(f *excelize.File, sheetName string, result gin.H) {
+func (h *ImportHandler) processModelProviderMappingsSheet(f *excelize.File, sheetName string, result gin.H) {
 	rows, err := f.GetRows(sheetName)
 	if err != nil || len(rows) < 2 {
 		return
@@ -391,18 +391,19 @@ func (h *ImportHandler) processAssociationsSheet(f *excelize.File, sheetName str
 
 	associationsResult := result["result"].(gin.H)["associations"].(gin.H)
 	headers := rows[0]
-	
+
 	// Find column indices
-	modelNameIdx := findColumnIndex(headers, "model_name")
-	providerNameIdx := findColumnIndex(headers, "provider_name")
-	providerModelIdx := findColumnIndex(headers, "provider_model")
-	supportsToolsIdx := findColumnIndex(headers, "supports_tools")
-	supportsVisionIdx := findColumnIndex(headers, "supports_vision")
+	modelNameIdx := findColumnIndex(headers, "modelname")
+	providerNameIdx := findColumnIndex(headers, "providername")
+	providerModelIdx := findColumnIndex(headers, "providermodel")
+	toolCallIdx := findColumnIndex(headers, "toolcall")
+	structuredOutputIdx := findColumnIndex(headers, "structuredoutput")
+	imageIdx := findColumnIndex(headers, "image")
 	weightIdx := findColumnIndex(headers, "weight")
 	enabledIdx := findColumnIndex(headers, "enabled")
 
 	if modelNameIdx == -1 || providerNameIdx == -1 || providerModelIdx == -1 {
-		associationsResult["errors"] = append(associationsResult["errors"].([]interface{}), gin.H{"row": 1, "field": "headers", "error": "Required columns (model_name, provider_name, provider_model) not found"})
+		associationsResult["errors"] = append(associationsResult["errors"].([]interface{}), gin.H{"row": 1, "field": "headers", "error": "Required columns (ModelName, ProviderName, ProviderModel) not found"})
 		return
 	}
 
@@ -415,55 +416,69 @@ func (h *ImportHandler) processAssociationsSheet(f *excelize.File, sheetName str
 
 		associationsResult["total"] = associationsResult["total"].(int) + 1
 
-		// Check if association already exists by model and provider
-		var existingMapping database.ModelProviderMapping
-		if err := h.db.Where("model_id = ? AND provider_id = ?",
-			h.db.Raw("SELECT id FROM models WHERE name = ?", row[modelNameIdx]),
-			h.db.Raw("SELECT id FROM providers WHERE type = ?", row[providerNameIdx])).First(&existingMapping).Error; err == nil {
-			associationsResult["skipped"] = associationsResult["skipped"].(int) + 1
-			continue
-		}
-
-		// Parse boolean values
-		if supportsToolsIdx != -1 && len(row) > supportsToolsIdx {
-			// supportsTools is not used
-		}
-
-		if supportsVisionIdx != -1 && len(row) > supportsVisionIdx {
-			// supportsVision is not used
-		}
-
-		if enabledIdx != -1 && len(row) > enabledIdx {
-			// enabled is not used
-		}
-
-		// Parse weight
-		if weightIdx != -1 && len(row) > weightIdx && row[weightIdx] != "" {
-			// weight is not used
-		}
-
-		// Find provider by type
+		// Find provider by name
 		var provider database.Provider
-		if err := h.db.Where("type = ?", row[providerNameIdx]).First(&provider).Error; err != nil {
-			associationsResult["errors"] = append(associationsResult["errors"].([]interface{}), gin.H{"row": i + 1, "field": "provider_name", "error": "Provider not found: " + row[providerNameIdx]})
+		if err := h.db.Where("name = ?", row[providerNameIdx]).First(&provider).Error; err != nil {
+			associationsResult["errors"] = append(associationsResult["errors"].([]interface{}), gin.H{"row": i+1, "field": "provider_name", "error": "Provider not found: " + row[providerNameIdx]})
 			continue
 		}
 
 		// Find model by name
 		var model database.Model
 		if err := h.db.Where("name = ?", row[modelNameIdx]).First(&model).Error; err != nil {
-			associationsResult["errors"] = append(associationsResult["errors"].([]interface{}), gin.H{"row": i + 1, "field": "model_name", "error": "Model not found: " + row[modelNameIdx]})
+			associationsResult["errors"] = append(associationsResult["errors"].([]interface{}), gin.H{"row": i+1, "field": "model_name", "error": "Model not found: " + row[modelNameIdx]})
 			continue
 		}
 
+		// Check if association already exists
+		var existingMapping database.ModelProviderMapping
+		if err := h.db.Where("model_id = ? AND provider_id = ?", model.ID, provider.ID).First(&existingMapping).Error; err == nil {
+			associationsResult["skipped"] = associationsResult["skipped"].(int) + 1
+			continue
+		}
+
+		// Parse boolean values
+		toolCall := false
+		if toolCallIdx != -1 && len(row) > toolCallIdx {
+			toolCall = parseBool(row[toolCallIdx])
+		}
+
+		structuredOutput := false
+		if structuredOutputIdx != -1 && len(row) > structuredOutputIdx {
+			structuredOutput = parseBool(row[structuredOutputIdx])
+		}
+
+		image := false
+		if imageIdx != -1 && len(row) > imageIdx {
+			image = parseBool(row[imageIdx])
+		}
+
+		enabled := true
+		if enabledIdx != -1 && len(row) > enabledIdx {
+			enabled = parseBool(row[enabledIdx])
+		}
+
+		// Parse weight
+		weight := 100
+		if weightIdx != -1 && len(row) > weightIdx && row[weightIdx] != "" {
+			if val, err := strconv.Atoi(row[weightIdx]); err == nil {
+				weight = val
+			}
+		}
+
 		mapping := database.ModelProviderMapping{
-			ModelID:       model.ID,
-			ProviderID:    provider.ID,
-			ProviderModel: row[providerModelIdx],
+			ModelID:          model.ID,
+			ProviderID:       provider.ID,
+			ProviderModel:    row[providerModelIdx],
+			ToolCall:         toolCall,
+			StructuredOutput: structuredOutput,
+			Image:            image,
+			Weight:           uint(weight),
+			Enabled:          enabled,
 		}
 
 		if err := h.db.Create(&mapping).Error; err != nil {
-			associationsResult["errors"] = append(associationsResult["errors"].([]interface{}), gin.H{"row": i + 1, "field": "database", "error": err.Error()})
+			associationsResult["errors"] = append(associationsResult["errors"].([]interface{}), gin.H{"row": i+1, "field": "database", "error": err.Error()})
 		} else {
 			associationsResult["imported"] = associationsResult["imported"].(int) + 1
 		}

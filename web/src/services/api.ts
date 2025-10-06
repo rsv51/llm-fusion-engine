@@ -65,4 +65,20 @@ api.interceptors.response.use(
   }
 )
 
+export const excelApi = {
+  // 导出 Excel
+  async exportToExcel(): Promise<Blob> {
+    return api.get('/admin/export/excel', { responseType: 'blob' })
+  },
+
+  // 导入 Excel
+  async importFromExcel(file: File): Promise<{ message: string }> {
+    const formData = new FormData()
+    formData.append('file', file)
+    return api.post('/admin/import/excel', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    })
+  },
+}
+
 export default api

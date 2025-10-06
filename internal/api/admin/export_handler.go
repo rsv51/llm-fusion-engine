@@ -298,9 +298,9 @@ func (h *ExportHandler) createModelProviderMappingsSheetWithData(f *excelize.Fil
 	// Create ModelProviderMappings sheet with actual data
 	idx, _ := f.NewSheet("ModelProviderMappings")
 	f.SetActiveSheet(idx)
-	
+
 	// Set headers
-	headers := []string{"ID", "ModelID", "ModelName", "ProviderID", "ProviderName", "ProviderModel", "ToolCall", "StructuredOutput", "Image", "Weight", "Enabled"}
+	headers := []string{"ModelName", "ProviderName", "ProviderModel", "ToolCall", "StructuredOutput", "Image", "Weight", "Enabled"}
 	for i, header := range headers {
 		f.SetCellValue("ModelProviderMappings", fmt.Sprintf("%c1", 'A'+i), header)
 	}
@@ -308,16 +308,13 @@ func (h *ExportHandler) createModelProviderMappingsSheetWithData(f *excelize.Fil
 	// Add actual data with model and provider info
 	for i, mapping := range modelProviderMappings {
 		row := i + 2
-		f.SetCellValue("ModelProviderMappings", fmt.Sprintf("A%d", row), mapping.ID)
-		f.SetCellValue("ModelProviderMappings", fmt.Sprintf("B%d", row), mapping.ModelID)
-		f.SetCellValue("ModelProviderMappings", fmt.Sprintf("C%d", row), mapping.Model.Name)
-		f.SetCellValue("ModelProviderMappings", fmt.Sprintf("D%d", row), mapping.ProviderID)
-		f.SetCellValue("ModelProviderMappings", fmt.Sprintf("E%d", row), mapping.Provider.Name)
-		f.SetCellValue("ModelProviderMappings", fmt.Sprintf("F%d", row), mapping.ProviderModel)
-		f.SetCellValue("ModelProviderMappings", fmt.Sprintf("G%d", row), mapping.ToolCall)
-		f.SetCellValue("ModelProviderMappings", fmt.Sprintf("H%d", row), mapping.StructuredOutput)
-		f.SetCellValue("ModelProviderMappings", fmt.Sprintf("I%d", row), mapping.Image)
-		f.SetCellValue("ModelProviderMappings", fmt.Sprintf("J%d", row), mapping.Weight)
-		f.SetCellValue("ModelProviderMappings", fmt.Sprintf("K%d", row), mapping.Enabled)
+		f.SetCellValue("ModelProviderMappings", fmt.Sprintf("A%d", row), mapping.Model.Name)
+		f.SetCellValue("ModelProviderMappings", fmt.Sprintf("B%d", row), mapping.Provider.Name)
+		f.SetCellValue("ModelProviderMappings", fmt.Sprintf("C%d", row), mapping.ProviderModel)
+		f.SetCellValue("ModelProviderMappings", fmt.Sprintf("D%d", row), mapping.ToolCall)
+		f.SetCellValue("ModelProviderMappings", fmt.Sprintf("E%d", row), mapping.StructuredOutput)
+		f.SetCellValue("ModelProviderMappings", fmt.Sprintf("F%d", row), mapping.Image)
+		f.SetCellValue("ModelProviderMappings", fmt.Sprintf("G%d", row), mapping.Weight)
+		f.SetCellValue("ModelProviderMappings", fmt.Sprintf("H%d", row), mapping.Enabled)
 	}
 }
