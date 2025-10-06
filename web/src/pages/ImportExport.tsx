@@ -367,15 +367,29 @@ export const ImportExport: React.FC = () => {
         <div className="flex justify-between items-center pt-4 mt-4 border-t">
           <div>
             {importResult?.result.summary.total_errors === 0 ? (
-              <Badge variant="success" className="flex items-center">
-                <CheckCircle className="w-4 h-4 mr-1" />
-                导入成功
-              </Badge>
+              (importResult?.result.summary.total_imported || 0) > 0 ? (
+                <Badge variant="success" className="flex items-center">
+                  <CheckCircle className="w-4 h-4 mr-1" />
+                  导入成功
+                </Badge>
+              ) : (
+                <Badge variant="default" className="flex items-center">
+                  <CheckCircle className="w-4 h-4 mr-1" />
+                  无新数据导入(全部跳过)
+                </Badge>
+              )
             ) : (
-              <Badge variant="error" className="flex items-center">
-                <AlertCircle className="w-4 h-4 mr-1" />
-                部分导入失败
-              </Badge>
+              (importResult?.result.summary.total_imported || 0) > 0 ? (
+                <Badge variant="error" className="flex items-center">
+                  <AlertCircle className="w-4 h-4 mr-1" />
+                  部分导入失败
+                </Badge>
+              ) : (
+                <Badge variant="error" className="flex items-center">
+                  <AlertCircle className="w-4 h-4 mr-1" />
+                  导入失败
+                </Badge>
+              )
             )}
           </div>
           <Button
