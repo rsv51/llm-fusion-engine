@@ -394,7 +394,7 @@ const ModelSelector: React.FC<{
       const provider = providers.find(p => p.id === selectedProviderId);
       if (provider) {
         // 筛选与该供应商相关的模型
-        const relatedModels = models.filter(model => {
+        const relatedModels = models.filter(() => {
           // 筛选与当前供应商类型相关的模型
           // 这里可以根据实际业务逻辑调整，比如根据模型名称或其他特征判断
           // 暂时显示所有模型，实际应根据业务需求调整
