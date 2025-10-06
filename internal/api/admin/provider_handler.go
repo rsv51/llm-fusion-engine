@@ -128,16 +128,33 @@ func (h *ProviderHandler) GetProviderModels(c *gin.Context) {
 		return
 	}
 	
-	// For now, return a mock list of models based on provider type
-	// In a real implementation, this would query the provider's API
+	// TODO: In a future implementation, this should query the provider's API directly
+	// For now, return an updated list of models based on provider type
+	// This list is synchronized with the frontend defaultModels in models.ts
 	var models []string
 	switch provider.Type {
 	case "openai":
-		models = []string{"gpt-4", "gpt-4-turbo", "gpt-3.5-turbo", "gpt-3.5-turbo-16k"}
+		models = []string{
+			"gpt-4", "gpt-4-turbo", "gpt-4o", "gpt-4o-mini",
+			"gpt-3.5-turbo", "gpt-3.5-turbo-16k",
+			"o1-preview", "o1-mini",
+		}
 	case "anthropic":
-		models = []string{"claude-3-opus", "claude-3-sonnet", "claude-3-haiku"}
+		models = []string{
+			"claude-3-opus-20240229",
+			"claude-3-sonnet-20240229",
+			"claude-3-haiku-20240307",
+			"claude-3-5-sonnet-20240620",
+			"claude-2.1", "claude-2.0",
+		}
 	case "gemini":
-		models = []string{"gemini-pro", "gemini-pro-vision"}
+		models = []string{
+			"gemini-pro",
+			"gemini-pro-vision",
+			"gemini-1.5-pro-latest",
+			"gemini-1.5-flash-latest",
+			"gemini-ultra",
+		}
 	default:
 		models = []string{"default-model"}
 	}
