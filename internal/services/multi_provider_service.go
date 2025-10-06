@@ -5,20 +5,24 @@ import (
 	"encoding/json"
 	"errors"
 	"llm-fusion-engine/internal/core"
+	"llm-fusion-engine/internal/database"
 	"net/http"
+	"gorm.io/gorm"
 )
 
 // MultiProviderService coordinates routing and API requests.
 type MultiProviderService struct {
 	router         core.IProviderRouter
 	providerFactory core.IProviderFactory
+	db             *gorm.DB
 }
 
 // NewMultiProviderService creates a new MultiProviderService.
-func NewMultiProviderService(router core.IProviderRouter, factory core.IProviderFactory) *MultiProviderService {
+func NewMultiProviderService(router core.IProviderRouter, factory core.IProviderFactory, db *gorm.DB) *MultiProviderService {
 	return &MultiProviderService{
 		router:         router,
 		providerFactory: factory,
+		db:             db,
 	}
 }
 
@@ -40,12 +44,19 @@ func (s *MultiProviderService) ProcessChatCompletionHttpAsync(
 
 	// 2. Get the provider instance
 	// We need to get the provider type from the selected group.
-	// This assumes a group has a field like `ProviderType`.
-	// Let's assume the first provider in the group determines the type.
-	if len(routeResult.Group.Providers) == 0 {
-		return nil, errors.New("selected group has no providers")
+	// Since we removed the direct relationship, we need to query the database.
+	var providers []database.Provider
+	if err := s.db.Find(&providers).Error; err != nil {
+		return nil, errors.New("failed to retrieve providers")
 	}
-	// providerType := routeResult.Group.Providers[0].ProviderType
+	
+	if len(providers) == 0 {
+		return nil, errors.New("no providers available")
+	}
+	
+	// For now, use the first provider's type
+	// TODO: Implement proper provider selection logic based on the group
+	providerType := providers[0].Type
 	// TODO: Use provider factory when implementing actual provider logic
 	// provider, err := s.providerFactory.GetProvider(providerType)
 	// if err != nil {
