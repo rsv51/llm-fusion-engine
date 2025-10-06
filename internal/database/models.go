@@ -91,19 +91,6 @@ type RequestLog struct {
 	UserAgent        string `json:"userAgent"`
 }
 
-// Model represents a specific LLM model available in the system.
-type Model struct {
-	BaseModel
-	Name        string  `gorm:"uniqueIndex;not null" json:"name"`
-	Provider    string  `gorm:"index" json:"provider"`
-	Category    string  `json:"category"` // text/image/audio/video
-	MaxTokens   int     `json:"maxTokens"`
-	InputPrice  float64 `json:"inputPrice"`
-	OutputPrice float64 `json:"outputPrice"`
-	Description string  `json:"description"`
-	Enabled     bool    `gorm:"default:true" json:"enabled"`
-}
-
 // Model represents a user-friendly definition of a model with common configurations.
 type Model struct {
 	BaseModel
