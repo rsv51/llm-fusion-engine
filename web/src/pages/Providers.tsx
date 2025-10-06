@@ -28,7 +28,7 @@ export const Providers: React.FC = () => {
     try {
       const response = await api.get<PaginationResponse<Provider>>('/admin/providers', {
         params: { page, pageSize },
-      });
+      }) as unknown as PaginationResponse<Provider>;
       setProviders(response.data);
       setPagination(response.pagination);
     } catch (error: any) {

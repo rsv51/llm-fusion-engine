@@ -20,17 +20,12 @@ export const Models: React.FC = () => {
   const loadModels = async (pageNum: number) => {
     try {
       setLoading(true)
-      const response = await api.get('/admin/models', {
+      const response = await api.get<PaginationResponse<Model>>('/admin/models', {
         params: { page: pageNum, pageSize: 12, search: searchQuery },
-      }) as PaginationResponse<Model>;
-
-      // 安全地提取数据和分页，假设 PaginationResponse 是标准格式
-      const modelsList = response.data || [];
-      const pagination = response.pagination;
-
-      setModels(modelsList);
-      setPage(pagination?.page || 1);
-      setTotalPages(pagination?.totalPage || 1);
+      }) as unknown as PaginationResponse<Model>;
+      setModels(response.data);
+      setPage(response.pagination.page);
+      setTotalPages(response.pagination.totalPage);
     } catch (error) {
       console.error('加载模型失败:', error)
     } finally {

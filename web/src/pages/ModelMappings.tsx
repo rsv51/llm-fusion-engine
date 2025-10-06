@@ -42,20 +42,15 @@ export const ModelMappings: React.FC = () => {
     setLoading(true);
     try {
       const [mappingsResponse, modelsResponse, providersResponse] = await Promise.all([
-        api.get<PaginationResponse<ModelProviderMapping>>('/admin/model-provider-mappings', { params: { page, pageSize } }),
-        api.get<PaginationResponse<Model>>('/admin/models', { params: { page: 1, pageSize: 1000 } }), // Load all models for dropdown
-        api.get<PaginationResponse<Provider>>('/admin/providers', { params: { page: 1, pageSize: 1000 } }), // Load all providers for dropdown
+        api.get('/admin/model-provider-mappings', { params: { page, pageSize } }) as unknown as PaginationResponse<ModelProviderMapping>,
+        api.get('/admin/models', { params: { page: 1, pageSize: 1000 } }) as unknown as PaginationResponse<Model>,
+        api.get('/admin/providers', { params: { page: 1, pageSize: 1000 } }) as unknown as PaginationResponse<Provider>,
       ]);
 
-      // 使用 pickList 安全地提取数据
-      const mappingsData = pickList(mappingsResponse) || [];
-      const modelsData = pickList(modelsResponse) || [];
-      const providersData = pickList(providersResponse) || [];
-
-      setMappings(mappingsData);
-      setPagination(mappingsResponse.data.pagination);
-      setModels(modelsData);
-      setProviders(providersData);
+      setMappings(mappingsResponse.data);
+      setPagination(mappingsResponse.pagination);
+      setModels(modelsResponse.data);
+      setProviders(providersResponse.data);
     } catch (error: any) {
       console.error('加载数据失败:', error);
       setError(error.message || JSON.stringify(error));
