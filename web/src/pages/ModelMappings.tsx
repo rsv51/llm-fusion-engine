@@ -147,37 +147,71 @@ export const ModelMappings: React.FC = () => {
         <>
           {filteredMappings && filteredMappings.length > 0 ? (
             <Card>
-              <table className="w-full">
-                <thead>
-                  <tr>
-                    <th className="px-4 py-2 text-left">模型名称</th>
-                    <th className="px-4 py-2 text-left">提供商模型名称</th>
-                    <th className="px-4 py-2 text-left">提供商</th>
-                    <th className="px-4 py-2 text-left">功能</th>
-                    <th className="px-4 py-2 text-right">操作</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredMappings.map((mapping) => (
-                    <tr key={mapping.id}>
-                      <td className="px-4 py-2 font-medium">{mapping.model?.name}</td>
-                      <td className="px-4 py-2">{mapping.providerModel}</td>
-                      <td className="px-4 py-2">{mapping.provider?.name} ({mapping.provider?.type})</td>
-                      <td className="px-4 py-2">
-                        <div className="flex gap-1 flex-wrap">
-                          {mapping.toolCall && <Badge variant="info">工具调用</Badge>}
-                          {mapping.structuredOutput && <Badge variant="info">结构化输出</Badge>}
-                          {mapping.image && <Badge variant="info">图像输入</Badge>}
-                        </div>
-                      </td>
-                      <td className="px-4 py-2 text-right">
-                        <Button variant="secondary" size="sm" onClick={() => handleEdit(mapping)}><Edit2 className="w-4 h-4" /></Button>
-                        <Button variant="danger" size="sm" onClick={() => handleDelete(mapping.id)} className="ml-2"><Trash2 className="w-4 h-4" /></Button>
-                      </td>
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b border-gray-200">
+                      <th className="px-4 py-3 text-left text-sm font-medium text-gray-700">模型名称</th>
+                      <th className="px-4 py-3 text-left text-sm font-medium text-gray-700">提供商模型名称</th>
+                      <th className="px-4 py-3 text-left text-sm font-medium text-gray-700">提供商</th>
+                      <th className="px-4 py-3 text-left text-sm font-medium text-gray-700">功能</th>
+                      <th className="px-4 py-3 text-left text-sm font-medium text-gray-700">权重</th>
+                      <th className="px-4 py-3 text-left text-sm font-medium text-gray-700">状态</th>
+                      <th className="px-4 py-3 text-right text-sm font-medium text-gray-700">操作</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody className="divide-y divide-gray-200">
+                    {filteredMappings.map((mapping) => (
+                      <tr key={mapping.id} className="hover:bg-gray-50">
+                        <td className="px-4 py-3">
+                          <div className="font-medium text-gray-900">{mapping.model?.name}</div>
+                        </td>
+                        <td className="px-4 py-3">
+                          <div className="text-sm text-gray-900">{mapping.providerModel}</div>
+                        </td>
+                        <td className="px-4 py-3">
+                          <div className="text-sm text-gray-900">{mapping.provider?.name} ({mapping.provider?.type})</div>
+                        </td>
+                        <td className="px-4 py-3">
+                          <div className="flex gap-1 flex-wrap">
+                            {mapping.toolCall && <Badge variant="info">工具调用</Badge>}
+                            {mapping.structuredOutput && <Badge variant="info">结构化输出</Badge>}
+                            {mapping.image && <Badge variant="info">图像输入</Badge>}
+                          </div>
+                        </td>
+                        <td className="px-4 py-3">
+                          <div className="text-sm text-gray-900">{mapping.weight}</div>
+                        </td>
+                        <td className="px-4 py-3">
+                          <Badge variant={mapping.enabled ? 'success' : 'default'}>
+                            {mapping.enabled ? '启用' : '禁用'}
+                          </Badge>
+                        </td>
+                        <td className="px-4 py-3 text-right">
+                          <div className="flex justify-end gap-2">
+                            <Button
+                              variant="secondary"
+                              size="sm"
+                              onClick={() => handleEdit(mapping)}
+                              title="编辑"
+                            >
+                              <Edit2 className="w-4 h-4" />
+                            </Button>
+                            <Button
+                              variant="danger"
+                              size="sm"
+                              onClick={() => handleDelete(mapping.id)}
+                              title="删除"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </Card>
           ) : (
             <div className="text-center py-12">

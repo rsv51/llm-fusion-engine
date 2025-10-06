@@ -193,86 +193,94 @@ export const Providers: React.FC = () => {
       ) : (
         <>
           {filteredProviders && filteredProviders.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {filteredProviders.map((provider) => (
-                <Card key={provider.id} className="p-6 hover:shadow-lg transition-shadow">
-                  <div className="space-y-4">
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <h3 className="text-lg font-semibold text-gray-900">{provider.name}</h3>
-                        <p className="text-sm text-gray-500 mt-1">ID: {provider.id}</p>
-                      </div>
-                      <Badge variant={provider.enabled ? 'success' : 'default'}>
-                        {provider.enabled ? '已启用' : '已禁用'}
-                      </Badge>
-                    </div>
-
-                    <div className="space-y-2">
-                      <div>
-                        <p className="text-xs text-gray-500">类型</p>
-                        <p className="text-sm font-medium text-gray-900">{provider.type}</p>
-                      </div>
-                      {provider.healthStatus && (
-                        <div>
-                          <p className="text-xs text-gray-500">健康状态</p>
-                          <Badge variant={provider.healthStatus === 'healthy' ? 'success' : provider.healthStatus === 'unhealthy' ? 'error' : 'warning'}>
-                            {provider.healthStatus === 'healthy' ? '健康' : provider.healthStatus === 'unhealthy' ? '不健康' : '未知'}
+            <Card>
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b border-gray-200">
+                      <th className="px-4 py-3 text-left text-sm font-medium text-gray-700">供应商名称</th>
+                      <th className="px-4 py-3 text-left text-sm font-medium text-gray-700">类型</th>
+                      <th className="px-4 py-3 text-left text-sm font-medium text-gray-700">状态</th>
+                      <th className="px-4 py-3 text-left text-sm font-medium text-gray-700">健康状态</th>
+                      <th className="px-4 py-3 text-left text-sm font-medium text-gray-700">权重</th>
+                      <th className="px-4 py-3 text-left text-sm font-medium text-gray-700">延迟</th>
+                      <th className="px-4 py-3 text-right text-sm font-medium text-gray-700">操作</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-200">
+                    {filteredProviders.map((provider) => (
+                      <tr key={provider.id} className="hover:bg-gray-50">
+                        <td className="px-4 py-3">
+                          <div>
+                            <div className="font-medium text-gray-900">{provider.name}</div>
+                            <div className="text-sm text-gray-500">ID: {provider.id}</div>
+                          </div>
+                        </td>
+                        <td className="px-4 py-3">
+                          <div className="text-sm text-gray-900">{provider.type}</div>
+                        </td>
+                        <td className="px-4 py-3">
+                          <Badge variant={provider.enabled ? 'success' : 'default'}>
+                            {provider.enabled ? '已启用' : '已禁用'}
                           </Badge>
-                        </div>
-                      )}
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-4 pt-4 border-t border-gray-100">
-                      <div>
-                        <p className="text-xs text-gray-500">权重</p>
-                        <p className="text-lg font-semibold text-gray-900">{provider.weight}</p>
-                      </div>
-                      {provider.latency && (
-                        <div>
-                          <p className="text-xs text-gray-500">延迟</p>
-                          <p className="text-lg font-semibold text-gray-900">{provider.latency}ms</p>
-                        </div>
-                      )}
-                    </div>
-
-                    <div className="flex gap-2 pt-2">
-                      <Button
-                        variant="secondary"
-                        size="sm"
-                        onClick={() => handleCheckHealth(provider.id)}
-                        className="flex-1"
-                      >
-                        <Zap className="w-4 h-4 mr-1" />
-                        检查
-                      </Button>
-                      <Button
-                        variant="secondary"
-                        size="sm"
-                        onClick={() => handleGetModels(provider)}
-                        className="flex-1"
-                      >
-                        <List className="w-4 h-4 mr-1" />
-                        模型
-                      </Button>
-                      <Button
-                        variant="secondary"
-                        size="sm"
-                        onClick={() => handleEdit(provider)}
-                      >
-                        <Edit2 className="w-4 h-4" />
-                      </Button>
-                      <Button
-                        variant="danger"
-                        size="sm"
-                        onClick={() => handleDelete(provider.id)}
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
-                    </div>
-                  </div>
-                </Card>
-              ))}
-            </div>
+                        </td>
+                        <td className="px-4 py-3">
+                          {provider.healthStatus && (
+                            <Badge variant={provider.healthStatus === 'healthy' ? 'success' : provider.healthStatus === 'unhealthy' ? 'error' : 'warning'}>
+                              {provider.healthStatus === 'healthy' ? '健康' : provider.healthStatus === 'unhealthy' ? '不健康' : '未知'}
+                            </Badge>
+                          )}
+                        </td>
+                        <td className="px-4 py-3">
+                          <div className="text-sm text-gray-900">{provider.weight}</div>
+                        </td>
+                        <td className="px-4 py-3">
+                          <div className="text-sm text-gray-900">
+                            {provider.latency ? `${provider.latency}ms` : '-'}
+                          </div>
+                        </td>
+                        <td className="px-4 py-3 text-right">
+                          <div className="flex justify-end gap-2">
+                            <Button
+                              variant="secondary"
+                              size="sm"
+                              onClick={() => handleCheckHealth(provider.id)}
+                              title="健康检查"
+                            >
+                              <Zap className="w-4 h-4" />
+                            </Button>
+                            <Button
+                              variant="secondary"
+                              size="sm"
+                              onClick={() => handleGetModels(provider)}
+                              title="获取模型列表"
+                            >
+                              <List className="w-4 h-4" />
+                            </Button>
+                            <Button
+                              variant="secondary"
+                              size="sm"
+                              onClick={() => handleEdit(provider)}
+                              title="编辑"
+                            >
+                              <Edit2 className="w-4 h-4" />
+                            </Button>
+                            <Button
+                              variant="danger"
+                              size="sm"
+                              onClick={() => handleDelete(provider.id)}
+                              title="删除"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </Card>
           ) : (
             <div className="text-center py-12">
               <p className="text-gray-500">暂无供应商，请点击右上角"新建供应商"按钮添加。</p>

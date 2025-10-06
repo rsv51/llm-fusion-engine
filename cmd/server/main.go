@@ -43,7 +43,7 @@ func main() {
 	importHandler := admin.NewImportHandler(db)
 	providerHandler := admin.NewProviderHandler(db)
 	modelHandler := admin.NewModelHandler(db)
-	modelMappingHandler := admin.NewModelMappingHandler(db)
+	modelProviderMappingHandler := admin.NewModelProviderMappingHandler(db)
 	healthHandler := admin.NewHealthHandler(db, healthChecker)
 
 	// 4. Setup Router
@@ -107,11 +107,11 @@ func main() {
 		adminGroup.DELETE("/groups/:id", groupHandler.DeleteGroup)
 		
 		// Model Mappings
-		adminGroup.POST("/model-mappings", modelMappingHandler.CreateModelMapping)
-		adminGroup.GET("/model-mappings", modelMappingHandler.GetModelMappings)
-		adminGroup.GET("/model-mappings/:id", modelMappingHandler.GetModelMapping)
-		adminGroup.PUT("/model-mappings/:id", modelMappingHandler.UpdateModelMapping)
-		adminGroup.DELETE("/model-mappings/:id", modelMappingHandler.DeleteModelMapping)
+		adminGroup.POST("/model-provider-mappings", modelProviderMappingHandler.CreateModelProviderMapping)
+		adminGroup.GET("/model-provider-mappings", modelProviderMappingHandler.GetModelProviderMappings)
+		adminGroup.GET("/model-provider-mappings/:id", modelProviderMappingHandler.GetModelProviderMapping)
+		adminGroup.PUT("/model-provider-mappings/:id", modelProviderMappingHandler.UpdateModelProviderMapping)
+		adminGroup.DELETE("/model-provider-mappings/:id", modelProviderMappingHandler.DeleteModelProviderMapping)
 
 		// Keys
 		adminGroup.POST("/keys", keyHandler.CreateKey)

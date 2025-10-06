@@ -120,37 +120,78 @@ export const Models: React.FC = () => {
         <div className="text-center py-12">加载中...</div>
       ) : (
         <>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {models.map((model) => (
-              <Card key={model.id} className="p-4">
-                <div className="flex items-start justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-                      <Box className="w-5 h-5 text-blue-600" />
-                    </div>
-                    <div>
-                      <h3 className="font-semibold text-gray-900">{model.name}</h3>
-                      <p className="text-sm text-gray-500">{model.remark || '无备注'}</p>
-                    </div>
-                  </div>
-                  <Badge variant={model.enabled ? 'success' : 'default'}>
-                    {model.enabled ? '启用' : '禁用'}
-                  </Badge>
-                </div>
-                <div className="mt-4 pt-4 border-t border-gray-100 flex justify-end gap-2">
-                  <Button variant="secondary" size="sm" onClick={() => handleClone(model)}>
-                    <Copy className="w-4 h-4" />
-                  </Button>
-                  <Button variant="secondary" size="sm" onClick={() => handleEdit(model)}>
-                    <Edit2 className="w-4 h-4" />
-                  </Button>
-                  <Button variant="danger" size="sm" onClick={() => handleDelete(model.id)}>
-                    <Trash2 className="w-4 h-4" />
-                  </Button>
-                </div>
-              </Card>
-            ))}
-          </div>
+          <Card>
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b border-gray-200">
+                    <th className="px-4 py-3 text-left text-sm font-medium text-gray-700">模型名称</th>
+                    <th className="px-4 py-3 text-left text-sm font-medium text-gray-700">备注</th>
+                    <th className="px-4 py-3 text-left text-sm font-medium text-gray-700">最大重试次数</th>
+                    <th className="px-4 py-3 text-left text-sm font-medium text-gray-700">超时时间</th>
+                    <th className="px-4 py-3 text-left text-sm font-medium text-gray-700">状态</th>
+                    <th className="px-4 py-3 text-right text-sm font-medium text-gray-700">操作</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-200">
+                  {models.map((model) => (
+                    <tr key={model.id} className="hover:bg-gray-50">
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
+                            <Box className="w-4 h-4 text-blue-600" />
+                          </div>
+                          <div className="font-medium text-gray-900">{model.name}</div>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="text-sm text-gray-900">{model.remark || '无备注'}</div>
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="text-sm text-gray-900">{model.maxRetry}</div>
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="text-sm text-gray-900">{model.timeout}秒</div>
+                      </td>
+                      <td className="px-4 py-3">
+                        <Badge variant={model.enabled ? 'success' : 'default'}>
+                          {model.enabled ? '启用' : '禁用'}
+                        </Badge>
+                      </td>
+                      <td className="px-4 py-3 text-right">
+                        <div className="flex justify-end gap-2">
+                          <Button
+                            variant="secondary"
+                            size="sm"
+                            onClick={() => handleClone(model)}
+                            title="克隆"
+                          >
+                            <Copy className="w-4 h-4" />
+                          </Button>
+                          <Button
+                            variant="secondary"
+                            size="sm"
+                            onClick={() => handleEdit(model)}
+                            title="编辑"
+                          >
+                            <Edit2 className="w-4 h-4" />
+                          </Button>
+                          <Button
+                            variant="danger"
+                            size="sm"
+                            onClick={() => handleDelete(model.id)}
+                            title="删除"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </Card>
           <div className="flex justify-center items-center gap-4">
             <Button onClick={() => loadModels(page - 1)} disabled={page <= 1}>
               上一页
