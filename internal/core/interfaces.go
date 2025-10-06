@@ -15,8 +15,8 @@ type ProviderRouteResult struct {
 
 // IProviderRouter is responsible for routing a request to the appropriate provider group.
 type IProviderRouter interface {
-	// RouteRequestAsync selects a provider group based on the model, proxy key, and other strategies.
-	RouteRequestAsync(model, proxyKey string, excludedGroups []string) (*ProviderRouteResult, error)
+	// RouteRequestAsync selects a provider based on the model, proxy key, and failover/load-balancing strategies.
+	RouteRequestAsync(model, proxyKey string, excludedProviders []uint) (*ProviderRouteResult, error)
 }
 
 // IKeyManager manages the API keys for different provider groups.
