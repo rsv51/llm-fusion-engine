@@ -223,19 +223,6 @@ func (h *ImportHandler) processProvidersSheet(f *excelize.File, sheetName string
 			providersResult["errors"] = append(providersResult["errors"].([]interface{}), gin.H{"row": i + 1, "field": "database", "error": err.Error()})
 		} else {
 			providersResult["imported"] = providersResult["imported"].(int) + 1
-			
-			// If API key is provided, also create an ApiKey record
-			if apiKeyIdx != -1 && len(row) > apiKeyIdx && row[apiKeyIdx] != "" {
-				apiKey := database.ApiKey{
-					ProviderID: provider.ID,
-					Key:        row[apiKeyIdx],
-					IsHealthy:  true,
-				}
-				if err := h.db.Create(&apiKey).Error; err != nil {
-					// Log error but don't fail the import
-					fmt.Printf("Warning: Failed to create API key for provider %s: %v\n", provider.Name, err)
-				}
-			}
 		}
 	}
 }
