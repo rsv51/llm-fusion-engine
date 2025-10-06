@@ -30,7 +30,7 @@ func main() {
 	healthChecker := services.NewHealthChecker(db)
 	// TODO: Initialize ProviderFactory
 	// providerFactory := services.NewProviderFactory()
-	multiProviderService := services.NewMultiProviderService(providerRouter, nil) // Pass nil for factory for now
+	multiProviderService := services.NewMultiProviderService(providerRouter, nil, db) // Pass nil for factory for now
 
 	// 3. Initialize Handlers
 	chatHandler := v1.NewChatHandler(multiProviderService)
