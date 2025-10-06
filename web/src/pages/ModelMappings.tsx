@@ -386,41 +386,9 @@ const ModelSelector: React.FC<{
   
   // 当选择的供应商变化时，筛选对应的模型
   useEffect(() => {
-    if (selectedProviderId === '') {
-      // 如果没有选择供应商，显示所有模型
-      setFilteredModels(models);
-    } else {
-      // 根据选择的供应商筛选模型
-      const provider = providers.find(p => p.id === selectedProviderId);
-      if (provider) {
-        // 筛选与该供应商相关的模型
-        const relatedModels = models.filter(model => {
-          // 筛选与当前供应商类型相关的模型
-          // 根据供应商类型筛选模型名称前缀匹配的模型
-          const provider = providers.find(p => p.id === selectedProviderId);
-          if (!provider) return true;
-          
-          // 根据供应商类型确定模型前缀
-          const modelPrefixMap: Record<string, string[]> = {
-            'openai': ['gpt-', 'o1-'],
-            'anthropic': ['claude-'],
-            'gemini': ['gemini-'],
-            // 可以根据需要添加更多供应商类型的映射
-          };
-          
-          const prefixes = modelPrefixMap[provider.type] || [];
-          
-          // 如果没有配置前缀，显示所有模型
-          if (prefixes.length === 0) return true;
-          
-          // 检查模型名称是否匹配任何前缀
-          return prefixes.some(prefix => model.name.toLowerCase().startsWith(prefix.toLowerCase()));
-        });
-        setFilteredModels(relatedModels);
-      } else {
-        setFilteredModels([]);
-      }
-    }
+    // 始终显示所有模型,不进行筛选
+    // 因为模型配置是独立于供应商的,用户应该能看到所有已配置的模型
+    setFilteredModels(models);
   }, [selectedProviderId, models, providers]);
 
   return (
