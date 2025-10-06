@@ -154,6 +154,29 @@ export const Providers: React.FC = () => {
     }
   }
 
+  const handleCopySingleModel = async (modelName: string) => {
+    try {
+      await navigator.clipboard.writeText(modelName)
+      alert(`模型名称 "${modelName}" 已复制到粘贴板`)
+    } catch (error) {
+      console.error('复制失败:', error)
+      alert('复制失败，请重试')
+    }
+  }
+
+  const handleCopyAllModels = async () => {
+    if (!providerModels) return
+    
+    try {
+      const modelsText = providerModels.models.join('\n')
+      await navigator.clipboard.writeText(modelsText)
+      alert(`已复制 ${providerModels.models.length} 个模型名称到粘贴板`)
+    } catch (error) {
+      console.error('复制失败:', error)
+      alert('复制失败，请重试')
+    }
+  }
+
 
   return (
     <div className="space-y-6">
@@ -303,6 +326,8 @@ export const Providers: React.FC = () => {
         providerModels={providerModels}
         onImportAll={handleImportAllModels}
         onImportSingle={handleImportSingleModel}
+        onCopySingle={handleCopySingleModel}
+        onCopyAll={handleCopyAllModels}
         importing={importing}
       />
     </div>
@@ -519,6 +544,8 @@ interface ProviderModelsModalProps {
   providerModels: {providerId: number, models: string[], providerName: string} | null
   onImportAll: () => void
   onImportSingle: (modelName: string) => void
+  onCopySingle: (modelName: string) => void
+  onCopyAll: () => void
   importing: boolean
 }
 
@@ -528,6 +555,8 @@ const ProviderModelsModal: React.FC<ProviderModelsModalProps> = ({
   providerModels,
   onImportAll,
   onImportSingle,
+  onCopySingle,
+  onCopyAll,
   importing
 }) => {
   if (!providerModels) return null
@@ -552,15 +581,27 @@ const ProviderModelsModal: React.FC<ProviderModelsModalProps> = ({
                   <tr key={index}>
                     <td className="px-4 py-2 text-sm text-gray-900">{model}</td>
                     <td className="px-4 py-2 text-right">
-                      <Button
-                        variant="secondary"
-                        size="sm"
-                        onClick={() => onImportSingle(model)}
-                        disabled={importing}
-                      >
-                        <Download className="w-4 h-4 mr-1" />
-                        导入
-                      </Button>
+                      <div className="flex gap-2 justify-end">
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          onClick={() => onCopySingle(model)}
+                          title="复制模型名称"
+                        >
+                          <Copy className="w-4 h-4 mr-1" />
+                          复制
+                        </Button>
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          onClick={() => onImportSingle(model)}
+                          disabled={importing}
+                          title="导入到模型配置"
+                        >
+                          <Download className="w-4 h-4 mr-1" />
+                          导入
+                        </Button>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -576,13 +617,24 @@ const ProviderModelsModal: React.FC<ProviderModelsModalProps> = ({
           >
             取消
           </Button>
-          <Button
-            onClick={onImportAll}
-            disabled={importing}
-          >
-            <Download className="w-4 h-4 mr-2" />
-            {importing ? '导入中...' : '导入所有模型到配置'}
-          </Button>
+          <div className="flex gap-2">
+            <Button
+              variant="secondary"
+              onClick={onCopyAll}
+              title="复制所有模型名称到粘贴板"
+            >
+              <Copy className="w-4 h-4 mr-2" />
+              复制所有模型
+            </Button>
+            <Button
+              onClick={onImportAll}
+              disabled={importing}
+              title="将所有模型导入到系统配置"
+            >
+              <Download className="w-4 h-4 mr-2" />
+              {importing ? '导入中...' : '导入所有模型'}
+            </Button>
+          </div>
         </div>
       </div>
     </Modal>
