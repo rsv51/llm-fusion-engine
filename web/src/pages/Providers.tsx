@@ -29,8 +29,8 @@ export const Providers: React.FC = () => {
       const response = await api.get<PaginationResponse<Provider>>('/admin/providers', {
         params: { page, pageSize },
       });
-      setProviders(response.data.data);
-      setPagination(response.data.pagination);
+      setProviders(response.data);
+      setPagination(response.pagination);
     } catch (error: any) {
       console.error('加载供应商失败:', error);
       setError(error.message || JSON.stringify(error));

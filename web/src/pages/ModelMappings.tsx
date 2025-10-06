@@ -47,10 +47,15 @@ export const ModelMappings: React.FC = () => {
         api.get<PaginationResponse<Provider>>('/admin/providers', { params: { page: 1, pageSize: 1000 } }), // Load all providers for dropdown
       ]);
 
-      setMappings(mappingsResponse.data.data);
+      // 使用 pickList 安全地提取数据
+      const mappingsData = pickList(mappingsResponse) || [];
+      const modelsData = pickList(modelsResponse) || [];
+      const providersData = pickList(providersResponse) || [];
+
+      setMappings(mappingsData);
       setPagination(mappingsResponse.data.pagination);
-      setModels(modelsResponse.data.data);
-      setProviders(providersResponse.data.data);
+      setModels(modelsData);
+      setProviders(providersData);
     } catch (error: any) {
       console.error('加载数据失败:', error);
       setError(error.message || JSON.stringify(error));

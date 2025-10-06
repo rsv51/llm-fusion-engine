@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { Card, Button, Input, Modal, Badge } from '../components/ui'
 import { Box, Settings, CheckCircle, XCircle, Plus, Edit2, Trash2, Search, Copy } from 'lucide-react'
 import { api } from '../services'
-import type { Model } from '../types'
+import type { Model, PaginationResponse } from '../types'
 
 export const Models: React.FC = () => {
   const [models, setModels] = useState<Model[]>([])
@@ -21,21 +21,16 @@ export const Models: React.FC = () => {
     try {
       setLoading(true)
       const response = await api.get('/admin/models', {
-        params: { page: pageNum, pageSize: 12, search: searchQuery }
-      }) as any;
-      console.log('Models API Response:', response); // 添加日志
-      // 后端返回格式为 { data: [...], pagination: {...} } 或 { items: [...], page: ..., totalPages: ... }
-      if (response.data && Array.isArray(response.data)) {
-        setModels(response.data)
-        setPage(response.pagination?.page || 1)
-        setTotalPages(response.pagination?.totalPage || 1)
-      } else if (response.items && Array.isArray(response.items)) {
-        setModels(response.items)
-        setPage(response.page || 1)
-        setTotalPages(response.totalPages || 1)
-      } else {
-        console.error('Models API 响应数据格式不正确:', response);
-      }
+        params: { page: pageNum, pageSize: 12, search: searchQuery },
+      }) as PaginationResponse<Model>;
+
+      // 安全地提取数据和分页，假设 PaginationResponse 是标准格式
+      const modelsList = response.data || [];
+      const pagination = response.pagination;
+
+      setModels(modelsList);
+      setPage(pagination?.page || 1);
+      setTotalPages(pagination?.totalPage || 1);
     } catch (error) {
       console.error('加载模型失败:', error)
     } finally {
