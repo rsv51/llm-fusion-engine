@@ -21,7 +21,7 @@ func NewModelMappingHandler(db *gorm.DB) *ModelMappingHandler {
 
 // CreateModelMapping creates a new model mapping.
 func (h *ModelMappingHandler) CreateModelMapping(c *gin.Context) {
-	var mapping database.ModelMapping
+	var mapping database.ModelProviderMapping
 	if err := c.ShouldBindJSON(&mapping); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
@@ -49,10 +49,10 @@ func (h *ModelMappingHandler) GetModelMappings(c *gin.Context) {
 
 	offset := (page - 1) * pageSize
 
-	var mappings []database.ModelMapping
+	var mappings []database.ModelProviderMapping
 	var total int64
 
-	if err := h.db.Model(&database.ModelMapping{}).Count(&total).Error; err != nil {
+	if err := h.db.Model(&database.ModelProviderMapping{}).Count(&total).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to count model mappings"})
 		return
 	}
@@ -75,7 +75,7 @@ func (h *ModelMappingHandler) GetModelMappings(c *gin.Context) {
 
 // GetModelMapping retrieves a single model mapping by ID.
 func (h *ModelMappingHandler) GetModelMapping(c *gin.Context) {
-	var mapping database.ModelMapping
+	var mapping database.ModelProviderMapping
 	id := c.Param("id")
 	if err := h.db.Preload("Provider").First(&mapping, id).Error; err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Model mapping not found"})
@@ -86,7 +86,7 @@ func (h *ModelMappingHandler) GetModelMapping(c *gin.Context) {
 
 // UpdateModelMapping updates an existing model mapping.
 func (h *ModelMappingHandler) UpdateModelMapping(c *gin.Context) {
-	var mapping database.ModelMapping
+	var mapping database.ModelProviderMapping
 	id := c.Param("id")
 	if err := h.db.First(&mapping, id).Error; err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Model mapping not found"})
@@ -105,7 +105,7 @@ func (h *ModelMappingHandler) UpdateModelMapping(c *gin.Context) {
 // DeleteModelMapping deletes a model mapping.
 func (h *ModelMappingHandler) DeleteModelMapping(c *gin.Context) {
 	id := c.Param("id")
-	if err := h.db.Delete(&database.ModelMapping{}, id).Error; err != nil {
+	if err := h.db.Delete(&database.ModelProviderMapping{}, id).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete model mapping"})
 		return
 	}
