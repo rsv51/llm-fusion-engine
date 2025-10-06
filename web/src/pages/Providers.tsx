@@ -558,8 +558,8 @@ const ProviderModelsModal: React.FC<ProviderModelsModalProps> = ({
                         onClick={() => onImportSingle(model)}
                         disabled={importing}
                       >
-                        <Copy className="w-4 h-4 mr-1" />
-                        复制
+                        <Download className="w-4 h-4 mr-1" />
+                        导入
                       </Button>
                     </td>
                   </tr>
@@ -581,7 +581,7 @@ const ProviderModelsModal: React.FC<ProviderModelsModalProps> = ({
             disabled={importing}
           >
             <Download className="w-4 h-4 mr-2" />
-            {importing ? '导入中...' : '一键复制所有模型'}
+            {importing ? '导入中...' : '导入所有模型到配置'}
           </Button>
         </div>
       </div>

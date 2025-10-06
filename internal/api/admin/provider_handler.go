@@ -1,10 +1,13 @@
 package admin
 
 import (
+	"context"
 	"fmt"
 	"llm-fusion-engine/internal/database"
+	"llm-fusion-engine/internal/providers"
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
@@ -118,6 +121,8 @@ func (h *ProviderHandler) DeleteProvider(c *gin.Context) {
 }
 
 // GetProviderModels retrieves available models for a specific provider.
+// It attempts to fetch models from the provider's actual API.
+// If that fails, it falls back to a default list.
 func (h *ProviderHandler) GetProviderModels(c *gin.Context) {
 	id := c.Param("id")
 	
@@ -128,19 +133,60 @@ func (h *ProviderHandler) GetProviderModels(c *gin.Context) {
 		return
 	}
 	
-	// TODO: In a future implementation, this should query the provider's API directly
-	// For now, return an updated list of models based on provider type
-	// This list is synchronized with the frontend defaultModels in models.ts
 	var models []string
-	switch provider.Type {
+	var fetchError error
+	
+	// Try to create a client and fetch real models from the provider's API
+	client, err := providers.CreateClient(provider.Type, provider.Config)
+	if err == nil {
+		// Validate config before attempting to fetch
+		if err := client.ValidateConfig(); err == nil {
+			ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+			defer cancel()
+			
+			// Fetch real models from the provider's API
+			models, fetchError = client.GetModels(ctx)
+		} else {
+			fetchError = err
+		}
+	} else {
+		fetchError = err
+	}
+	
+	// If fetching from API failed, fall back to default list
+	if fetchError != nil || len(models) == 0 {
+		models = getDefaultModels(provider.Type)
+		
+		// Log the error for debugging but don't fail the request
+		if fetchError != nil {
+			c.JSON(http.StatusOK, gin.H{
+				"models":       models,
+				"providerName": provider.Name,
+				"warning":      fmt.Sprintf("Failed to fetch from provider API, using default list: %v", fetchError),
+				"source":       "default",
+			})
+			return
+		}
+	}
+	
+	c.JSON(http.StatusOK, gin.H{
+		"models":       models,
+		"providerName": provider.Name,
+		"source":       "api",
+	})
+}
+
+// getDefaultModels returns a default list of models for a given provider type
+func getDefaultModels(providerType string) []string {
+	switch providerType {
 	case "openai":
-		models = []string{
+		return []string{
 			"gpt-4", "gpt-4-turbo", "gpt-4o", "gpt-4o-mini",
 			"gpt-3.5-turbo", "gpt-3.5-turbo-16k",
 			"o1-preview", "o1-mini",
 		}
 	case "anthropic":
-		models = []string{
+		return []string{
 			"claude-3-opus-20240229",
 			"claude-3-sonnet-20240229",
 			"claude-3-haiku-20240307",
@@ -148,7 +194,7 @@ func (h *ProviderHandler) GetProviderModels(c *gin.Context) {
 			"claude-2.1", "claude-2.0",
 		}
 	case "gemini":
-		models = []string{
+		return []string{
 			"gemini-pro",
 			"gemini-pro-vision",
 			"gemini-1.5-pro-latest",
@@ -156,13 +202,8 @@ func (h *ProviderHandler) GetProviderModels(c *gin.Context) {
 			"gemini-ultra",
 		}
 	default:
-		models = []string{"default-model"}
+		return []string{}
 	}
-	
-	c.JSON(http.StatusOK, gin.H{
-		"models":       models,
-		"providerName": provider.Name,
-	})
 }
 
 // ImportProviderModels imports models for a specific provider.
