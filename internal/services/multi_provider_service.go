@@ -6,10 +6,11 @@ import (
 	"errors"
 	"llm-fusion-engine/internal/core"
 	"net/http"
+	"net/url"
 	"strings"
+
 	"gorm.io/gorm"
 )
-
 // MultiProviderService coordinates routing and API requests.
 type MultiProviderService struct {
 	router         core.IProviderRouter
@@ -79,7 +80,7 @@ func (s *MultiProviderService) ProcessChatCompletionHttpAsync(
 	// Construct the full API endpoint URL
 	var apiEndpoint string
 	if chatEndpoint, ok := config["chatEndpoint"].(string); ok && chatEndpoint != "" {
-		// If a specific chatEndpoint is defined in the provider's config, use it
+		// If a specific chatEndpoint is defined, use it.
 		apiEndpoint = baseUrl
 		if strings.HasSuffix(apiEndpoint, "/") {
 			apiEndpoint = apiEndpoint[:len(apiEndpoint)-1]
@@ -89,12 +90,15 @@ func (s *MultiProviderService) ProcessChatCompletionHttpAsync(
 		}
 		apiEndpoint += chatEndpoint
 	} else {
-		// Fallback to the default OpenAI-compatible endpoint
+		// Otherwise, use the baseUrl, but only append the default path if the baseUrl doesn't already have a path.
 		apiEndpoint = baseUrl
-		if !strings.HasSuffix(apiEndpoint, "/") {
-			apiEndpoint += "/"
+		parsedUrl, err := url.Parse(apiEndpoint)
+		if err == nil && (parsedUrl.Path == "" || parsedUrl.Path == "/") {
+			if !strings.HasSuffix(apiEndpoint, "/") {
+				apiEndpoint += "/"
+			}
+			apiEndpoint += "v1/chat/completions"
 		}
-		apiEndpoint += "v1/chat/completions"
 	}
 
 	// 6. Create request body
