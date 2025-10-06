@@ -45,7 +45,6 @@ func main() {
 	modelHandler := admin.NewModelHandler(db)
 	modelProviderMappingHandler := admin.NewModelProviderMappingHandler(db)
 	healthHandler := admin.NewHealthHandler(db, healthChecker)
-	excelHandler := admin.NewExcelHandler(db)
 
 	// 4. Setup Router
 	router := gin.Default()
@@ -154,12 +153,8 @@ func main() {
 		// Health Checks
 		adminGroup.POST("/health/providers/:id", healthHandler.CheckProviderHealth)
 		adminGroup.POST("/health/providers", healthHandler.CheckAllProvidersHealth)
-
-		// User account management
-		adminGroup.PUT("/account/profile", authHandler.UpdateProfile)
-		// Excel Import/Export
-		adminGroup.GET("/export/excel", excelHandler.ExportToExcel)
-		adminGroup.POST("/import/excel", excelHandler.ImportFromExcel)
+// User account management
+adminGroup.PUT("/account/profile", authHandler.UpdateProfile)
 	}
 	
 	// NoRoute handler for SPA routing
