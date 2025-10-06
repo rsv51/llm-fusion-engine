@@ -295,7 +295,7 @@ const KeyModal: React.FC<KeyModalProps> = ({ isOpen, onClose, onSuccess, groups 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
-    if (!formData.key.trim() || !formData.groupId) {
+    if (!formData.key.trim() || formData.groupId === undefined) {
       alert('请填写完整信息')
       return
     }
