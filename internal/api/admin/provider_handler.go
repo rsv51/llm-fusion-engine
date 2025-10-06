@@ -59,7 +59,9 @@ func (h *ProviderHandler) GetProviders(c *gin.Context) {
 	}
 
 	// Get paginated records
-	if err := h.db.Offset(offset).Limit(pageSize).Preload("ApiKeys").Find(&providers).Error; err != nil {
+	// Note: Preload("ApiKeys") is removed as ApiKeys are now part of the JSON config.
+	// If direct access to ApiKeys is still needed, a separate endpoint or logic would be required.
+	if err := h.db.Offset(offset).Limit(pageSize).Find(&providers).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve providers"})
 		return
 	}

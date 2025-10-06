@@ -47,20 +47,21 @@ type Group struct {
 	Providers         []Provider `json:"providers"`                                   // Has-many relationship
 }
 
-// Provider holds the configuration for a specific LLM provider within a group.
+// Provider holds the configuration for a specific LLM provider.
+// Note: The original GroupID is removed to align with a more direct provider management model.
+// Group-based routing can be implemented at a higher level if needed.
 type Provider struct {
 	BaseModel
-	GroupID      uint   `gorm:"index" json:"groupId"`
-	ProviderType string `gorm:"not null" json:"providerType"` // e.g., openai, anthropic, gemini
-	ApiKeys      []ApiKey `json:"apiKeys"` // Has-many relationship
-	Weight       uint   `gorm:"default:1" json:"weight"`
+	Name         string `gorm:"uniqueIndex;not null" json:"name"` // e.g., "MyOpenAIInstance"
+	Type         string `gorm:"index;not null" json:"type"`     // e.g., openai, anthropic, gemini
+	Config       string `gorm:"type:text" json:"config"`       // JSON string for provider-specific settings (e.g., API key, base URL)
+	Console      string `gorm:"type:varchar(255)" json:"console"` // Optional console URL for the provider
 	Enabled      bool   `gorm:"default:true" json:"enabled"`
-	BaseURL      string `gorm:"type:varchar(255)" json:"baseUrl"`
-	Timeout      int    `gorm:"default:30" json:"timeout"`    // 秒
-	MaxRetries   int    `gorm:"default:3" json:"maxRetries"`
+	Weight       uint   `gorm:"default:1" json:"weight"` // For load balancing if used directly
 	HealthStatus string `gorm:"default:'unknown'" json:"healthStatus"` // healthy/unhealthy/unknown
 	LastChecked  *time.Time `json:"lastChecked"`
 	Latency      uint   `json:"latency"` // in milliseconds
+	ApiKeys      []ApiKey `json:"apiKeys"` // Has-many relationship
 }
 
 // ApiKey stores an individual API key for a provider.
@@ -103,11 +104,28 @@ type Model struct {
 	Enabled     bool    `gorm:"default:true" json:"enabled"`
 }
 
-// ModelMapping allows aliasing model names to specific provider models.
-type ModelMapping struct {
+// Model represents a user-friendly definition of a model with common configurations.
+type Model struct {
 	BaseModel
-	UserFriendlyName  string `gorm:"uniqueIndex;not null" json:"userFriendlyName"` // e.g., "fast-model"
-	ProviderModelName string `gorm:"not null" json:"providerModelName"`           // e.g., "gpt-3.5-turbo"
-	ProviderID        uint   `gorm:"not null" json:"providerId"`           // Foreign key to Provider
-	Provider          Provider `gorm:"foreignKey:ProviderID" json:"provider"`
+	Name     string `gorm:"uniqueIndex;not null" json:"name"` // e.g., "GPT-4-Turbo", "Claude-3-Sonnet"
+	Remark   string `gorm:"type:text" json:"remark"`           // Description or notes for the model
+	MaxRetry int    `gorm:"default:3" json:"maxRetry"`         // Global retry limit for this model
+	Timeout  int    `gorm:"default:30" json:"timeout"`         // Global timeout in seconds for this model
+	Enabled  bool   `gorm:"default:true" json:"enabled"`       // Whether this model definition is active
+}
+
+// ModelProviderMapping links a Model definition to a specific Provider instance,
+// defining how the model is served by that provider and its specific capabilities.
+type ModelProviderMapping struct {
+	BaseModel
+	ModelID          uint   `gorm:"index:idx_model_provider;not null" json:"modelId"`
+	ProviderID       uint   `gorm:"index:idx_model_provider;not null" json:"providerId"`
+	ProviderModel    string `gorm:"not null" json:"providerModel"` // The actual model ID on the provider's platform (e.g., "gpt-4-0125-preview")
+	ToolCall         *bool  `json:"toolCall"`         // Can this model instance accept tool calls?
+	StructuredOutput *bool  `json:"structuredOutput"` // Can this model instance accept structured output requests?
+	Image            *bool  `json:"image"`            // Can this model instance accept image inputs (vision)?
+	Weight           int    `gorm:"default:1" json:"weight"` // Weight for load balancing among multiple provider instances for the same model
+	Enabled          bool   `gorm:"default:true" json:"enabled"` // Is this specific mapping enabled?
+	Model            Model   `gorm:"foreignKey:ModelID" json:"model"`
+	Provider         Provider `gorm:"foreignKey:ProviderID" json:"provider"`
 }

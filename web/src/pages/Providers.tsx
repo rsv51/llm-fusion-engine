@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react'
-import { Plus, Edit2, Trash2, Search, Zap } from 'lucide-react'
+import { Plus, Edit2, Trash2, Search, Zap, Code } from 'lucide-react' // Added Code icon for config
 import { Card, Button, Input, Modal, Badge } from '../components/ui'
 import { api } from '../services'
-import type { Provider, PaginationResponse } from '../types'
+import type { Provider, PaginationResponse, CreateProviderRequest } from '../types'
 
 export const Providers: React.FC = () => {
   const [providers, setProviders] = useState<Provider[]>([])
@@ -10,6 +10,7 @@ export const Providers: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('')
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [editingProvider, setEditingProvider] = useState<Provider | null>(null)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     loadProviders()
@@ -75,15 +76,15 @@ export const Providers: React.FC = () => {
     }
   }
 
-  let filteredProviders: Provider[] = []
-  try {
-    filteredProviders = providers.filter(provider =>
-      provider?.providerType?.toLowerCase().includes(searchQuery.toLowerCase())
-    )
-  } catch (error) {
-    console.error('Error filtering providers:', error, providers)
-    filteredProviders = []
-  }
+  const filteredProviders = React.useMemo(() => {
+    if (!searchQuery.trim()) return providers;
+    
+    const query = searchQuery.toLowerCase();
+    return providers.filter(provider =>
+      provider?.name?.toLowerCase().includes(query) ||
+      provider?.type?.toLowerCase().includes(query)
+    );
+  }, [providers, searchQuery]);
 
   const handleCheckHealth = async (id: number) => {
     try {
@@ -94,8 +95,6 @@ export const Providers: React.FC = () => {
     }
   }
 
-  // 添加一个错误状态
-  const [error, setError] = useState<string | null>(null);
 
   return (
     <div className="space-y-6">
@@ -121,7 +120,7 @@ export const Providers: React.FC = () => {
         <div className="relative">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
           <Input
-            placeholder="搜索供应商类型..."
+            placeholder="搜索供应商名称或类型..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="pl-10"
@@ -142,7 +141,7 @@ export const Providers: React.FC = () => {
                   <div className="space-y-4">
                     <div className="flex items-start justify-between">
                       <div className="flex-1">
-                        <h3 className="text-lg font-semibold text-gray-900">{provider.providerType}</h3>
+                        <h3 className="text-lg font-semibold text-gray-900">{provider.name}</h3>
                         <p className="text-sm text-gray-500 mt-1">ID: {provider.id}</p>
                       </div>
                       <Badge variant={provider.enabled ? 'success' : 'default'}>
@@ -150,15 +149,32 @@ export const Providers: React.FC = () => {
                       </Badge>
                     </div>
 
+                    <div className="space-y-2">
+                      <div>
+                        <p className="text-xs text-gray-500">类型</p>
+                        <p className="text-sm font-medium text-gray-900">{provider.type}</p>
+                      </div>
+                      {provider.healthStatus && (
+                        <div>
+                          <p className="text-xs text-gray-500">健康状态</p>
+                          <Badge variant={provider.healthStatus === 'healthy' ? 'success' : provider.healthStatus === 'unhealthy' ? 'error' : 'warning'}>
+                            {provider.healthStatus === 'healthy' ? '健康' : provider.healthStatus === 'unhealthy' ? '不健康' : '未知'}
+                          </Badge>
+                        </div>
+                      )}
+                    </div>
+
                     <div className="grid grid-cols-2 gap-4 pt-4 border-t border-gray-100">
                       <div>
                         <p className="text-xs text-gray-500">权重</p>
                         <p className="text-lg font-semibold text-gray-900">{provider.weight}</p>
                       </div>
-                      <div>
-                        <p className="text-xs text-gray-500">分组ID</p>
-                        <p className="text-lg font-semibold text-gray-900">{provider.groupId}</p>
-                      </div>
+                      {provider.latency && (
+                        <div>
+                          <p className="text-xs text-gray-500">延迟</p>
+                          <p className="text-lg font-semibold text-gray-900">{provider.latency}ms</p>
+                        </div>
+                      )}
                     </div>
 
                     <div className="flex gap-2 pt-2">
@@ -192,7 +208,7 @@ export const Providers: React.FC = () => {
             </div>
           ) : (
             <div className="text-center py-12">
-              <p className="text-gray-500">暂无供应商，请点击右上角“新建供应商”按钮添加。</p>
+              <p className="text-gray-500">暂无供应商，请点击右上角"新建供应商"按钮添加。</p>
             </div>
           )}
         </>
@@ -216,25 +232,53 @@ interface ProviderModalProps {
 }
 
 const ProviderModal: React.FC<ProviderModalProps> = ({ isOpen, onClose, onSubmit, provider }) => {
-  const [formData, setFormData] = useState<Partial<Provider>>({})
+  const getDefaultFormData = (): Partial<CreateProviderRequest> => ({
+    name: '',
+    type: 'openai',
+    config: JSON.stringify({ baseUrl: '', timeout: 30, maxRetries: 3, enabled: true }, null, 2),
+    enabled: true,
+    weight: 1,
+  });
+
+  const getInitialFormData = (): Partial<CreateProviderRequest> => {
+    if (provider) {
+      return {
+        name: provider.name,
+        type: provider.type,
+        config: provider.config,
+        console: provider.console,
+        enabled: provider.enabled,
+        weight: provider.weight,
+      };
+    }
+    return getDefaultFormData();
+  };
+
+  const [formData, setFormData] = useState<Partial<CreateProviderRequest>>(getInitialFormData());
+  const [configError, setConfigError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (provider) {
-      setFormData(provider)
-    } else {
-      setFormData({
-        providerType: '',
-        enabled: true,
-        weight: 1,
-        groupId: 0,
-        timeout: 30,
-        maxRetries: 3,
-      })
+    setFormData(getInitialFormData());
+    setConfigError(null);
+  }, [provider]);
+
+  const handleConfigChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const configStr = e.target.value
+    setFormData({ ...formData, config: configStr })
+    try {
+      JSON.parse(configStr)
+      setConfigError(null)
+    } catch (err) {
+      setConfigError("无效的 JSON 格式")
     }
-  }, [provider])
+  }
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
+    if (configError) {
+      alert("请修正配置中的 JSON 错误")
+      return
+    }
     onSubmit(formData)
   }
 
@@ -242,63 +286,67 @@ const ProviderModal: React.FC<ProviderModalProps> = ({ isOpen, onClose, onSubmit
     <Modal isOpen={isOpen} onClose={onClose} title={provider ? '编辑供应商' : '新建供应商'}>
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">供应商类型</label>
+          <label className="block text-sm font-medium text-gray-700 mb-2">供应商名称</label>
           <Input
-            value={formData.providerType}
-            onChange={(e) => setFormData({ ...formData, providerType: e.target.value })}
-            placeholder="例如: openai"
+            value={formData.name || ''}
+            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+            placeholder="例如: MyOpenAIInstance"
             required
           />
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">分组ID</label>
-          <Input
-            type="number"
-            value={formData.groupId}
-            onChange={(e) => setFormData({ ...formData, groupId: parseInt(e.target.value) })}
+          <label className="block text-sm font-medium text-gray-700 mb-2">供应商类型</label>
+          <select
+            value={formData.type || 'openai'}
+            onChange={(e) => setFormData({ ...formData, type: e.target.value })}
+            className="w-full p-2 border rounded"
             required
+          >
+            <option value="openai">OpenAI</option>
+            <option value="anthropic">Anthropic</option>
+            <option value="gemini">Google Gemini</option>
+            {/* Add more provider types as needed */}
+          </select>
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            配置 (JSON 格式)
+            <Code className="w-4 h-4 inline ml-2" />
+          </label>
+          <textarea
+            value={formData.config || ''}
+            onChange={handleConfigChange}
+            placeholder={`例如:\n{\n  "baseUrl": "https://api.openai.com/v1",\n  "apiKey": "sk-...",\n  "timeout": 30\n}`}
+            rows={8}
+            className="w-full p-2 border rounded font-mono text-sm"
+          />
+          {configError && <p className="text-red-500 text-sm">{configError}</p>}
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">控制台地址 (可选)</label>
+          <Input
+            value={formData.console || ''}
+            onChange={(e) => setFormData({ ...formData, console: e.target.value })}
+            placeholder="https://console.example.com"
           />
         </div>
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">权重</label>
           <Input
             type="number"
-            value={formData.weight}
-            onChange={(e) => setFormData({ ...formData, weight: parseInt(e.target.value) })}
+            value={formData.weight || 0}
+            onChange={(e) => setFormData({ ...formData, weight: parseInt(e.target.value) || 0 })}
             required
-          />
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">Base URL</label>
-          <Input
-            value={formData.baseUrl}
-            onChange={(e) => setFormData({ ...formData, baseUrl: e.target.value })}
-            placeholder="https://api.openai.com/v1"
-          />
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">超时 (秒)</label>
-          <Input
-            type="number"
-            value={formData.timeout}
-            onChange={(e) => setFormData({ ...formData, timeout: parseInt(e.target.value) })}
-          />
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">最大重试次数</label>
-          <Input
-            type="number"
-            value={formData.maxRetries}
-            onChange={(e) => setFormData({ ...formData, maxRetries: parseInt(e.target.value) })}
           />
         </div>
         <div className="flex items-center gap-2">
           <input
             type="checkbox"
-            checked={formData.enabled}
+            checked={formData.enabled || false}
             onChange={(e) => setFormData({ ...formData, enabled: e.target.checked })}
+            id="enabled-checkbox"
           />
-          <label className="text-sm text-gray-700">启用此供应商</label>
+          <label htmlFor="enabled-checkbox" className="text-sm text-gray-700">启用此供应商</label>
         </div>
         <div className="flex gap-3 pt-4">
           <Button type="button" variant="secondary" onClick={onClose} className="flex-1">
