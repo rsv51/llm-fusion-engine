@@ -42,53 +42,57 @@ func (s *MultiProviderService) ProcessChatCompletionHttpAsync(
 		return nil, err
 	}
 
-	// 2. Get the provider instance
-	// We need to get the provider type from the selected group.
-	// Since we removed the direct relationship, we need to query the database.
-	var providers []database.Provider
-	if err := s.db.Find(&providers).Error; err != nil {
-		return nil, errors.New("failed to retrieve providers")
+	// 2. Get the provider from route result
+	provider := routeResult.Provider
+	if provider == nil {
+		return nil, errors.New("no provider found in route result")
 	}
-	
-	if len(providers) == 0 {
-		return nil, errors.New("no providers available")
-	}
-	
-	// For now, we'll just use the first provider's type for logging
-	// TODO: Implement proper provider selection logic based on the group
-	_ = providers[0].Type // Assign to blank identifier to avoid "declared and not used" error
-	// TODO: Use provider factory when implementing actual provider logic
-	// provider, err := s.providerFactory.GetProvider(providerType)
-	// if err != nil {
-	// 	return nil, err
-	// }
 
-	// 3. Prepare and forward the request
-	// The actual implementation of this will be in the provider instance.
-	// For now, we'll just simulate it.
-	// TODO: Replace this with actual provider.ProcessRequest(...)
-	
-	// Modify the request with the resolved model
+	// 3. Parse provider config to get baseUrl and apiKey
+	var config map[string]interface{}
+	if err := json.Unmarshal([]byte(provider.Config), &config); err != nil {
+		return nil, errors.New("failed to parse provider config")
+	}
+
+	baseUrl, ok := config["baseUrl"].(string)
+	if !ok || baseUrl == "" {
+		return nil, errors.New("baseUrl not found in provider config")
+	}
+
+	// Get API key from config or use routed key
+	apiKey := routeResult.ApiKey
+	if configKey, ok := config["apiKey"].(string); ok && configKey != "" {
+		apiKey = configKey
+	}
+
+	// 4. Modify the request with the resolved model
 	requestBody["model"] = routeResult.ResolvedModel
-	
-	// Create a new HTTP request to the downstream service
-	downstreamURL := "http://localhost:8080/mock" // This should be the actual provider endpoint
-	
+
+	// 5. Construct the full API endpoint URL
+	// Most providers use /v1/chat/completions endpoint
+	apiEndpoint := baseUrl
+	if !strings.HasSuffix(apiEndpoint, "/") {
+		apiEndpoint += "/"
+	}
+	apiEndpoint += "v1/chat/completions"
+
+	// 6. Create request body
 	jsonBody, err := json.Marshal(requestBody)
 	if err != nil {
 		return nil, err
 	}
 
-	req, err := http.NewRequest("POST", downstreamURL, bytes.NewBuffer(jsonBody))
+	// 7. Create HTTP request
+	req, err := http.NewRequest("POST", apiEndpoint, bytes.NewBuffer(jsonBody))
 	if err != nil {
 		return nil, err
 	}
 
-	// Set headers, including the real API key
+	// 8. Set headers
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Authorization", "Bearer "+routeResult.ApiKey)
+	req.Header.Set("Authorization", "Bearer "+apiKey)
 
-	// Execute the request
+	// 9. Execute the request
 	client := &http.Client{}
 	return client.Do(req)
 }
