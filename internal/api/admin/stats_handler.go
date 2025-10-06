@@ -49,15 +49,19 @@ func (h *StatsHandler) GetStats(c *gin.Context) {
 
 	// Get provider-specific stats
 	type ProviderStatsResult struct {
-		ProviderID      uint
-		ProviderName    string
-		RequestCount    int64
-		SuccessCount    int64
-		AvgResponseTime float64
+		ProviderID      uint    `json:"providerId"`
+		ProviderName    string  `json:"providerName"`
+		RequestCount    int64   `json:"requestCount"`
+		SuccessCount    int64   `json:"successCount"`
+		ErrorCount      int64   `json:"errorCount"`
+		AvgResponseTime float64 `json:"avgResponseTimeMs"`
 	}
 	var providerStats []ProviderStatsResult
 	h.db.Model(&database.RequestLog{}).
-		Select("provider_id, COUNT(*) as request_count, SUM(CASE WHEN status_code >= 200 AND status_code < 300 THEN 1 ELSE 0 END) as success_count, AVG(latency_ms) as avg_response_time").
+		Select("provider_id, COUNT(*) as request_count, "+
+			"SUM(CASE WHEN status_code >= 200 AND status_code < 300 THEN 1 ELSE 0 END) as success_count, "+
+			"SUM(CASE WHEN status_code >= 400 THEN 1 ELSE 0 END) as error_count, "+
+			"AVG(latency_ms) as avg_response_time").
 		Where("created_at > ?", since).
 		Group("provider_id").
 		Scan(&providerStats)
@@ -66,7 +70,7 @@ func (h *StatsHandler) GetStats(c *gin.Context) {
 	for i, p := range providerStats {
 		var provider database.Provider
 		if err := h.db.First(&provider, p.ProviderID).Error; err == nil {
-			providerStats[i].ProviderName = provider.Type
+			providerStats[i].ProviderName = provider.Name
 		}
 	}
 

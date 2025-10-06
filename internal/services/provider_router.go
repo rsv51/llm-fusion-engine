@@ -160,9 +160,62 @@ func (r *ProviderRouter) selectByFailover(groups []*database.Group) (*database.G
 
 // selectByWeightedRandom selects a group based on weights.
 func (r *ProviderRouter) selectByWeightedRandom(groups []*database.Group, proxyKey *database.ProxyKey) (*database.Group, error) {
-	// TODO: Implement weighted random selection based on provider weights within the group
-	// and group weights in the proxy key.
-	return r.selectByFailover(groups) // Fallback to failover for now
+	if len(groups) == 0 {
+		return nil, errors.New("no groups to select from")
+	}
+
+	// Parse group weights from proxy key if available
+	var groupWeights map[string]int
+	if proxyKey != nil && proxyKey.GroupWeights != "" {
+		if err := json.Unmarshal([]byte(proxyKey.GroupWeights), &groupWeights); err != nil {
+			// If parsing fails, fall back to failover
+			return r.selectByFailover(groups)
+		}
+	}
+
+	// Build weighted list
+	type weightedGroup struct {
+		group  *database.Group
+		weight int
+	}
+	
+	var weightedGroups []weightedGroup
+	totalWeight := 0
+	
+	for _, group := range groups {
+		weight := 1 // Default weight
+		
+		// Check if custom weight is defined for this group
+		if groupWeights != nil {
+			if customWeight, exists := groupWeights[group.Name]; exists && customWeight > 0 {
+				weight = customWeight
+			}
+		}
+		
+		weightedGroups = append(weightedGroups, weightedGroup{
+			group:  group,
+			weight: weight,
+		})
+		totalWeight += weight
+	}
+	
+	if totalWeight == 0 {
+		return r.selectByFailover(groups)
+	}
+	
+	// Select randomly based on weights
+	randomValue := rand.Intn(totalWeight)
+	currentSum := 0
+	
+	for _, wg := range weightedGroups {
+		currentSum += wg.weight
+		if randomValue < currentSum {
+			return wg.group, nil
+		}
+	}
+	
+	// Fallback (should not reach here)
+	return weightedGroups[0].group, nil
 }
 
 func init() {
