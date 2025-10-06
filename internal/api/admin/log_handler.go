@@ -33,11 +33,11 @@ func (h *LogHandler) GetLogs(c *gin.Context) {
 	
 	offset := (page - 1) * pageSize
 	
-	var logs []database.RequestLog
+	var logs []database.Log
 	var total int64
-	
-	query := h.db.Model(&database.RequestLog{})
-	
+
+	query := h.db.Model(&database.Log{})
+
 	// Apply filters if provided
 	if model := c.Query("model"); model != "" {
 		query = query.Where("model = ?", model)
@@ -75,7 +75,7 @@ func (h *LogHandler) GetLogs(c *gin.Context) {
 
 // GetLog retrieves a single request log by ID.
 func (h *LogHandler) GetLog(c *gin.Context) {
-	var log database.RequestLog
+	var log database.Log
 	id := c.Param("id")
 	if err := h.db.First(&log, id).Error; err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Log not found"})
@@ -90,8 +90,13 @@ func (h *LogHandler) DeleteLogs(c *gin.Context) {
 	daysOld, _ := strconv.Atoi(c.DefaultQuery("daysOld", "30"))
 	
 	// Delete logs older than specified days
-	result := h.db.Where("created_at < NOW() - INTERVAL ? DAY", daysOld).Delete(&database.RequestLog{})
-	
+	// Note: The date function might vary depending on the SQL dialect.
+	// This uses a generic approach that might need adjustment for specific databases.
+	// For SQLite, it would be something like: "timestamp < date('now', '-' || ? || ' day')"
+	// For simplicity, we'll stick to a more direct time comparison.
+	deleteTime := time.Now().AddDate(0, 0, -daysOld)
+	result := h.db.Where("timestamp < ?", deleteTime).Delete(&database.Log{})
+
 	if result.Error != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete logs"})
 		return

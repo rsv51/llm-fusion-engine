@@ -188,11 +188,11 @@ func (h *ExportHandler) createProvidersSheetWithData(f *excelize.File, providers
 	f.SetActiveSheet(idx)
 	
 	// Set headers
-	headers := []string{"ID", "Name", "Type", "Config", "Console", "Enabled", "Weight", "HealthStatus", "LastChecked", "Latency"}
+	headers := []string{"ID", "Name", "Type", "Config", "Console", "Enabled", "Weight", "Timeout", "Priority"}
 	for i, header := range headers {
 		f.SetCellValue("Providers", fmt.Sprintf("%c1", 'A'+i), header)
 	}
-	
+
 	// Add actual data
 	for i, provider := range providers {
 		row := i + 2
@@ -203,9 +203,8 @@ func (h *ExportHandler) createProvidersSheetWithData(f *excelize.File, providers
 		f.SetCellValue("Providers", fmt.Sprintf("E%d", row), provider.Console)
 		f.SetCellValue("Providers", fmt.Sprintf("F%d", row), provider.Enabled)
 		f.SetCellValue("Providers", fmt.Sprintf("G%d", row), provider.Weight)
-		f.SetCellValue("Providers", fmt.Sprintf("H%d", row), provider.HealthStatus)
-		f.SetCellValue("Providers", fmt.Sprintf("I%d", row), provider.LastChecked)
-		f.SetCellValue("Providers", fmt.Sprintf("J%d", row), provider.Latency)
+		f.SetCellValue("Providers", fmt.Sprintf("H%d", row), provider.Timeout)
+		f.SetCellValue("Providers", fmt.Sprintf("I%d", row), provider.Priority)
 	}
 }
 

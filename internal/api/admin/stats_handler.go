@@ -27,11 +27,11 @@ func (h *StatsHandler) GetStats(c *gin.Context) {
 
 	// Get total requests
 	var totalRequests int64
-	h.db.Model(&database.RequestLog{}).Where("created_at > ?", since).Count(&totalRequests)
+	h.db.Model(&database.Log{}).Where("timestamp > ?", since).Count(&totalRequests)
 
 	// Get successful requests
 	var successRequests int64
-	h.db.Model(&database.RequestLog{}).Where("created_at > ? AND status_code >= 200 AND status_code < 300", since).Count(&successRequests)
+	h.db.Model(&database.Log{}).Where("timestamp > ? AND response_status >= 200 AND response_status < 300", since).Count(&successRequests)
 
 	// Calculate success rate
 	var successRate float64
@@ -41,38 +41,32 @@ func (h *StatsHandler) GetStats(c *gin.Context) {
 
 	// Get average response time
 	var avgResponseTimeMs float64
-	h.db.Model(&database.RequestLog{}).Where("created_at > ?", since).Select("avg(latency_ms)").Row().Scan(&avgResponseTimeMs)
+	h.db.Model(&database.Log{}).Where("timestamp > ?", since).Select("avg(latency)").Row().Scan(&avgResponseTimeMs)
 
 	// Get active keys (keys used in the last 24 hours)
 	var activeKeys int64
-	h.db.Model(&database.RequestLog{}).Where("created_at > ?", since).Distinct("provider_id").Count(&activeKeys)
+	h.db.Model(&database.Log{}).Where("timestamp > ?", since).Distinct("proxy_key").Count(&activeKeys)
 
 	// Get provider-specific stats
 	type ProviderStatsResult struct {
-		ProviderID      uint    `json:"providerId"`
-		ProviderName    string  `json:"providerName"`
+		Provider        string  `json:"provider"`
 		RequestCount    int64   `json:"requestCount"`
 		SuccessCount    int64   `json:"successCount"`
 		ErrorCount      int64   `json:"errorCount"`
 		AvgResponseTime float64 `json:"avgResponseTimeMs"`
 	}
 	var providerStats []ProviderStatsResult
-	h.db.Model(&database.RequestLog{}).
-		Select("provider_id, COUNT(*) as request_count, "+
-			"SUM(CASE WHEN status_code >= 200 AND status_code < 300 THEN 1 ELSE 0 END) as success_count, "+
-			"SUM(CASE WHEN status_code >= 400 THEN 1 ELSE 0 END) as error_count, "+
-			"AVG(latency_ms) as avg_response_time").
-		Where("created_at > ?", since).
-		Group("provider_id").
+	h.db.Model(&database.Log{}).
+		Select("provider, COUNT(*) as request_count, "+
+			"SUM(CASE WHEN response_status >= 200 AND response_status < 300 THEN 1 ELSE 0 END) as success_count, "+
+			"SUM(CASE WHEN response_status >= 400 THEN 1 ELSE 0 END) as error_count, "+
+			"AVG(latency) as avg_response_time").
+		Where("timestamp > ?", since).
+		Group("provider").
 		Scan(&providerStats)
 
 	// Populate provider names
-	for i, p := range providerStats {
-		var provider database.Provider
-		if err := h.db.First(&provider, p.ProviderID).Error; err == nil {
-			providerStats[i].ProviderName = provider.Name
-		}
-	}
+	// The provider name is now directly in the stats, so no need for a second query
 
 	stats := gin.H{
 		"totalRequests":     totalRequests,

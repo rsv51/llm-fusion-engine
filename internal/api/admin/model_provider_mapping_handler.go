@@ -242,9 +242,9 @@ func (h *ModelProviderMappingHandler) GetMappingHealthStatus(c *gin.Context) {
 	}
 
 	// Get the last 10 request logs for this mapping
-	var logs []database.RequestLog
-	err := h.db.Where("provider_id = ? AND model = ?", mapping.ProviderID, mapping.ProviderModel).
-		Order("created_at DESC").
+	var logs []database.Log
+	err := h.db.Where("provider = ? AND model = ?", mapping.Provider.Name, mapping.ProviderModel).
+		Order("timestamp DESC").
 		Limit(10).
 		Find(&logs).Error
 	
@@ -257,14 +257,14 @@ func (h *ModelProviderMappingHandler) GetMappingHealthStatus(c *gin.Context) {
 	healthStatus := make([]gin.H, 0, len(logs))
 	for _, log := range logs {
 		status := "success"
-		if log.StatusCode >= 400 {
+		if log.ResponseStatus >= 400 {
 			status = "error"
 		}
 		healthStatus = append(healthStatus, gin.H{
-			"timestamp":  log.CreatedAt,
+			"timestamp":  log.Timestamp,
 			"status":     status,
-			"statusCode": log.StatusCode,
-			"latencyMs":  log.LatencyMs,
+			"statusCode": log.ResponseStatus,
+			"latencyMs":  log.Latency,
 		})
 	}
 
@@ -285,9 +285,9 @@ func (h *ModelProviderMappingHandler) GetAllMappingsHealthStatus(c *gin.Context)
 	result := make(map[uint][]gin.H)
 	
 	for _, mapping := range mappings {
-		var logs []database.RequestLog
-		err := h.db.Where("provider_id = ? AND model = ?", mapping.ProviderID, mapping.ProviderModel).
-			Order("created_at DESC").
+		var logs []database.Log
+		err := h.db.Where("provider = ? AND model = ?", mapping.Provider.Name, mapping.ProviderModel).
+			Order("timestamp DESC").
 			Limit(10).
 			Find(&logs).Error
 		
@@ -298,13 +298,13 @@ func (h *ModelProviderMappingHandler) GetAllMappingsHealthStatus(c *gin.Context)
 		healthStatus := make([]gin.H, 0, len(logs))
 		for _, log := range logs {
 			status := "success"
-			if log.StatusCode >= 400 {
+			if log.ResponseStatus >= 400 {
 				status = "error"
 			}
 			healthStatus = append(healthStatus, gin.H{
-				"timestamp":  log.CreatedAt,
+				"timestamp":  log.Timestamp,
 				"status":     status,
-				"statusCode": log.StatusCode,
+				"statusCode": log.ResponseStatus,
 			})
 		}
 		
