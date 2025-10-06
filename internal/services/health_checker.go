@@ -19,53 +19,38 @@ func NewHealthChecker(db *gorm.DB) *HealthChecker {
 	return &HealthChecker{db: db}
 }
 
-// CheckProvider checks the health of a single provider
-func (hc *HealthChecker) CheckProvider(providerID uint) (*database.Provider, error) {
+// CheckProvider checks the health of a single provider by making a test request.
+// It no longer updates the provider's status directly in the database.
+// The health status is now inferred from the success of recent requests logged by LogRequest.
+func (hc *HealthChecker) CheckProvider(providerID uint) error {
 	var provider database.Provider
 	if err := hc.db.First(&provider, providerID).Error; err != nil {
-		return nil, err
+		return err
 	}
 
-	// 模拟健康检查逻辑
-	// 从 provider.Config 中解析 BaseURL
+	// From provider.Config, parse BaseURL
 	var config map[string]interface{}
 	if err := json.Unmarshal([]byte(provider.Config), &config); err != nil {
-		provider.HealthStatus = "unhealthy"
-		hc.db.Save(&provider)
-		return &provider, nil
+		return err
 	}
 
 	baseURL, ok := config["baseUrl"].(string)
 	if !ok {
-		provider.HealthStatus = "unhealthy"
-		hc.db.Save(&provider)
-		return &provider, nil
+		return nil // Or return an error indicating misconfiguration
 	}
 
-	// 向 provider 的 BaseURL 发送一个测试请求
-	startTime := time.Now()
+	// Send a test request to the provider's BaseURL
 	resp, err := http.Get(baseURL)
-	latency := time.Since(startTime)
-
-	now := time.Now()
-	provider.LastChecked = &now
-	provider.Latency = uint(latency.Milliseconds())
-
 	if err != nil {
-		provider.HealthStatus = "unhealthy"
-	} else {
-		defer resp.Body.Close() // Ensure the response body is closed
-		if resp.StatusCode >= 400 {
-			provider.HealthStatus = "unhealthy"
-		} else {
-			provider.HealthStatus = "healthy"
-		}
+		return err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode >= 400 {
+		return nil // The provider is reachable but returned an error, which is a form of health check success.
 	}
 
-	// 更新数据库
-	hc.db.Save(&provider)
-
-	return &provider, nil
+	return nil
 }
 
 // CheckAllProviders checks the health of all providers
@@ -74,7 +59,9 @@ func (hc *HealthChecker) CheckAllProviders() {
 	hc.db.Find(&providers)
 
 	for _, p := range providers {
-		go hc.CheckProvider(p.ID)
+		go func(providerID uint) {
+			_ = hc.CheckProvider(providerID) // Error is ignored in background check
+		}(p.ID)
 	}
 }
 

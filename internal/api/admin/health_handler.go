@@ -29,13 +29,15 @@ func (h *HealthHandler) CheckProviderHealth(c *gin.Context) {
 		return
 	}
 
-	provider, err := h.healthChecker.CheckProvider(uint(id))
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to check provider health"})
+	if err := h.healthChecker.CheckProvider(uint(id)); err != nil {
+		c.JSON(http.StatusOK, gin.H{
+			"status": "unhealthy",
+			"error":  err.Error(),
+		})
 		return
 	}
 
-	c.JSON(http.StatusOK, provider)
+	c.JSON(http.StatusOK, gin.H{"status": "healthy"})
 }
 
 // CheckAllProvidersHealth triggers a health check for all providers.
