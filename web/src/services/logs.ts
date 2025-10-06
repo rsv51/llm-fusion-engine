@@ -2,7 +2,7 @@
 
 import api from './api'
 import type {
-  RequestLog,
+  Log,
   LogQueryParams,
   LogStats,
   PaginationResponse,
@@ -10,7 +10,7 @@ import type {
 
 export const logsApi = {
   // 获取日志列表
-  async getLogs(params?: LogQueryParams): Promise<PaginationResponse<RequestLog>> {
+  async getLogs(params?: LogQueryParams): Promise<PaginationResponse<Log>> {
     return api.get('/admin/logs', { params })
   },
 
