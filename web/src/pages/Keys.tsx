@@ -282,7 +282,7 @@ const KeyModal: React.FC<KeyModalProps> = ({ isOpen, onClose, onSuccess, groups 
   const [formData, setFormData] = useState({
     description: '',
     key: '',
-    groupId: 1,
+    groupId: groups[0]?.id || 0,
     enabled: true
   })
 
@@ -304,7 +304,7 @@ const KeyModal: React.FC<KeyModalProps> = ({ isOpen, onClose, onSuccess, groups 
       await keysApi.createKey({
         key: formData.key,
         groupId: formData.groupId,
-        description: formData.description || undefined,
+        description: formData.description,
         enabled: formData.enabled
       })
       onClose()

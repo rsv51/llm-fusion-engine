@@ -27,6 +27,14 @@ func (h *KeyHandler) CreateKey(c *gin.Context) {
 		return
 	}
 
+	// Set default values
+	if key.GroupID == 0 {
+		key.GroupID = 1 // Default group
+	}
+	if !key.Enabled {
+		key.Enabled = true
+	}
+
 	if err := h.db.Create(&key).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create key"})
 		return

@@ -12,11 +12,12 @@ import (
 // ChatHandler handles chat completion requests.
 type ChatHandler struct {
 	service core.IMultiProviderService
+	keyManager core.IKeyManager
 }
 
 // NewChatHandler creates a new ChatHandler.
-func NewChatHandler(service core.IMultiProviderService) *ChatHandler {
-	return &ChatHandler{service: service}
+func NewChatHandler(service core.IMultiProviderService, keyManager core.IKeyManager) *ChatHandler {
+	return &ChatHandler{service: service, keyManager: keyManager}
 }
 
 // ChatCompletions is the handler for the /v1/chat/completions endpoint.
@@ -36,7 +37,13 @@ func (h *ChatHandler) ChatCompletions(c *gin.Context) {
 		return
 	}
 
-	// 3. Process the request
+	// 3. Validate proxy key
+	if _, err := h.keyManager.ValidateProxyKeyAsync(proxyKey); err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid API key"})
+		return
+	}
+
+	// 4. Process the request
 	resp, err := h.service.ProcessChatCompletionHttpAsync(requestBody, proxyKey)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -44,7 +51,7 @@ func (h *ChatHandler) ChatCompletions(c *gin.Context) {
 	}
 	defer resp.Body.Close()
 
-	// 4. Proxy the response
+	// 5. Proxy the response
 	// Copy headers
 	for key, values := range resp.Header {
 		for _, value := range values {
