@@ -76,12 +76,26 @@ func (s *MultiProviderService) ProcessChatCompletionHttpAsync(
 	}
 
 	// 5. Construct the full API endpoint URL
-	// Most providers use /v1/chat/completions endpoint
-	apiEndpoint := baseUrl
-	if !strings.HasSuffix(apiEndpoint, "/") {
-		apiEndpoint += "/"
+	// Construct the full API endpoint URL
+	var apiEndpoint string
+	if chatEndpoint, ok := config["chatEndpoint"].(string); ok && chatEndpoint != "" {
+		// If a specific chatEndpoint is defined in the provider's config, use it
+		apiEndpoint = baseUrl
+		if strings.HasSuffix(apiEndpoint, "/") {
+			apiEndpoint = apiEndpoint[:len(apiEndpoint)-1]
+		}
+		if !strings.HasPrefix(chatEndpoint, "/") {
+			chatEndpoint = "/" + chatEndpoint
+		}
+		apiEndpoint += chatEndpoint
+	} else {
+		// Fallback to the default OpenAI-compatible endpoint
+		apiEndpoint = baseUrl
+		if !strings.HasSuffix(apiEndpoint, "/") {
+			apiEndpoint += "/"
+		}
+		apiEndpoint += "v1/chat/completions"
 	}
-	apiEndpoint += "v1/chat/completions"
 
 	// 6. Create request body
 	jsonBody, err := json.Marshal(requestBody)

@@ -53,7 +53,7 @@ type Provider struct {
 	BaseModel
 	Name         string `gorm:"uniqueIndex;not null" json:"name"` // e.g., "MyOpenAIInstance"
 	Type         string `gorm:"index;not null" json:"type"`     // e.g., openai, anthropic, gemini
-	Config       string `gorm:"type:text" json:"config"`       // JSON string for provider-specific settings (e.g., API key, base URL)
+	Config       string `gorm:"type:text" json:"config"`       // JSON string for settings (e.g., {"apiKey": "...", "baseUrl": "...", "chatEndpoint": "v1/chat/completions"})
 	Console      string `gorm:"type:varchar(255)" json:"console"` // Optional console URL for the provider
 	Enabled      bool   `gorm:"default:true" json:"enabled"`
 	Priority     int    `gorm:"default:0" json:"priority"` // For failover sorting
