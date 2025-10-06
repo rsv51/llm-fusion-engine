@@ -34,6 +34,7 @@ func main() {
 
 	// 3. Initialize Handlers
 	chatHandler := v1.NewChatHandler(multiProviderService, keyManager)
+	v1ModelHandler := v1.NewModelHandler(db)
 	authHandler := admin.NewAuthHandler(db)
 	groupHandler := admin.NewGroupHandler(db)
 	statsHandler := admin.NewStatsHandler(db, startTime)
@@ -85,6 +86,7 @@ func main() {
 	v1Group := router.Group("/v1")
 	{
 		v1Group.POST("/chat/completions", chatHandler.ChatCompletions)
+		v1Group.GET("/models", v1ModelHandler.GetModels)
 	}
 
 	// Auth API (no auth required)
