@@ -42,15 +42,25 @@ export const ModelMappings: React.FC = () => {
     setLoading(true);
     try {
       const [mappingsResponse, modelsResponse, providersResponse] = await Promise.all([
-        api.get('/admin/model-provider-mappings', { params: { page, pageSize } }) as unknown as PaginationResponse<ModelProviderMapping>,
-        api.get('/admin/models', { params: { page: 1, pageSize: 1000 } }) as unknown as PaginationResponse<Model>,
-        api.get('/admin/providers', { params: { page: 1, pageSize: 1000 } }) as unknown as PaginationResponse<Provider>,
+        api.get('/admin/model-provider-mappings', { params: { page, pageSize } }),
+        api.get('/admin/models', { params: { page: 1, pageSize: 1000 } }),
+        api.get('/admin/providers', { params: { page: 1, pageSize: 1000 } }),
       ]);
 
-      setMappings(mappingsResponse.data);
-      setPagination(mappingsResponse.pagination);
-      setModels(modelsResponse.data);
-      setProviders(providersResponse.data);
+      const mappingsData = pickList(mappingsResponse) || [];
+      const modelsData = pickList(modelsResponse) || [];
+      const providersData = pickList(providersResponse) || [];
+
+      setMappings(mappingsData);
+      const { pagination } = mappingsResponse as any;
+      setPagination({
+        page: pagination?.page || 1,
+        pageSize: pagination?.pageSize || 20,
+        total: pagination?.total || 0,
+        totalPage: pagination?.totalPage || 1,
+      });
+      setModels(modelsData);
+      setProviders(providersData);
     } catch (error: any) {
       console.error('加载数据失败:', error);
       setError(error.message || JSON.stringify(error));

@@ -17,21 +17,30 @@ export const Models: React.FC = () => {
     loadModels(1)
   }, [])
 
+  const pickData = (resp: any) => {
+    if (!resp) return { data: [], pagination: {} };
+    if (Array.isArray(resp.data) && resp.pagination) return resp;
+    if (Array.isArray(resp.items)) return { data: resp.items, pagination: { page: resp.page, totalPage: resp.totalPages } };
+    if (Array.isArray(resp)) return { data: resp, pagination: {} };
+    return { data: [], pagination: {} };
+  };
+
   const loadModels = async (pageNum: number) => {
     try {
-      setLoading(true)
-      const response = await api.get<PaginationResponse<Model>>('/admin/models', {
+      setLoading(true);
+      const response = await api.get('/admin/models', {
         params: { page: pageNum, pageSize: 12, search: searchQuery },
-      }) as unknown as PaginationResponse<Model>;
-      setModels(response.data);
-      setPage(response.pagination.page);
-      setTotalPages(response.pagination.totalPage);
+      });
+      const { data, pagination } = pickData(response);
+      setModels(data);
+      setPage(pagination?.page || 1);
+      setTotalPages(pagination?.totalPage || 1);
     } catch (error) {
-      console.error('加载模型失败:', error)
+      console.error('加载模型失败:', error);
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   const handleSearch = () => {
     loadModels(1)
