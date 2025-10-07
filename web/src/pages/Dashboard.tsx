@@ -46,17 +46,22 @@ export const Dashboard: React.FC = () => {
 
   const loadData = async () => {
     try {
-      const [statsData, logsData, providersData] = await Promise.all([
+      const [statsData, logsData, providersResponse] = await Promise.all([
         systemApi.getStats(),
         logsApi.getLogs({ page: 1, pageSize: 5 }),
-        api.get('/admin/providers') as Promise<Provider[]>,
+        api.get('/admin/providers'),
       ]);
       
-      const providerMap = new Map(providersData.map(p => [p.id, p.name]));
+      // Handle pagination response for providers
+      const providersData = Array.isArray(providersResponse)
+        ? providersResponse
+        : (providersResponse.data || []);
+      
+      const providerMap = new Map(providersData.map((p: Provider) => [p.id, p.name]));
       
       if (statsData.providers) {
         statsData.providers.forEach(p => {
-          p.providerName = providerMap.get(p.providerId) || p.providerName;
+          p.providerName = (providerMap.get(p.providerId) || p.providerName) as string;
         });
       }
       
@@ -181,7 +186,11 @@ export const Dashboard: React.FC = () => {
         <div className="space-y-2">
           {recentLogs.length > 0 ? (
             recentLogs.map((log) => (
-              <div key={log.id} className="flex items-center justify-between p-3 border-l-2 border-gray-200 hover:border-blue-500 hover:bg-gray-50 transition-colors">
+              <a
+                key={log.id}
+                href={`/logs/${log.id}`}
+                className="flex items-center justify-between p-3 border-l-2 border-gray-200 hover:border-blue-500 hover:bg-gray-50 transition-colors cursor-pointer"
+              >
                 <div>
                   <p className="text-sm text-gray-900">{log.model} · {log.providerName}</p>
                   <p className="text-xs text-gray-500">{new Date(log.createdAt).toLocaleString()}</p>
@@ -189,7 +198,7 @@ export const Dashboard: React.FC = () => {
                 <Badge variant={log.statusCode < 400 ? 'success' : 'error'}>
                   {log.statusCode}
                 </Badge>
-              </div>
+              </a>
             ))
           ) : (
             <p className="text-sm text-gray-500 text-center py-4">暂无日志</p>

@@ -15,15 +15,20 @@ export const LogDetail: React.FC = () => {
       const fetchLog = async () => {
         try {
           setLoading(true);
-          const response = await logsApi.getLog(id as string);
+          setError(null);
+          const response = await logsApi.getLog(id);
           setLog(response);
         } catch (err: any) {
-          setError(err.message || 'Failed to fetch log details');
+          console.error('获取日志详情失败:', err);
+          setError(err.message || '加载日志详情失败');
         } finally {
           setLoading(false);
         }
       };
       fetchLog();
+    } else {
+      setError('无效的日志ID');
+      setLoading(false);
     }
   }, [id]);
 
