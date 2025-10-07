@@ -52,13 +52,18 @@ export const ModelMappings: React.FC = () => {
       const providersData = pickList(providersResponse) || [];
 
       setMappings(mappingsData);
-      const { pagination } = mappingsResponse as any;
-      setPagination({
-        page: pagination?.page || 1,
-        pageSize: pagination?.pageSize || 20,
-        total: pagination?.total || 0,
-        totalPage: pagination?.totalPage || 1,
-      });
+      const pickPagination = (resp: any) => {
+        const fallback = { page: 1, pageSize: 20, total: 0, totalPage: 1 };
+        if (!resp) return fallback;
+        return {
+          page: resp.pagination?.page || 1,
+          pageSize: resp.pagination?.pageSize || 20,
+          total: resp.pagination?.total || 0,
+          totalPage: resp.pagination?.totalPage || 1,
+        };
+      };
+      
+      setPagination(pickPagination(mappingsResponse));
       setModels(modelsData);
       setProviders(providersData);
     } catch (error: any) {

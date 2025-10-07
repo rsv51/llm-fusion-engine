@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react'
 import { TrendingUp, TrendingDown, Activity, Key, Zap, AlertCircle } from 'lucide-react'
 import { Card, Badge } from '../components/ui'
-import { systemApi, logsApi } from '../services'
-import type { SystemStats } from '../types'
+import { systemApi, logsApi, api } from '../services'
+import type { SystemStats, Provider } from '../types'
 
 interface DisplayLog {
   id: string
@@ -46,18 +46,28 @@ export const Dashboard: React.FC = () => {
 
   const loadData = async () => {
     try {
-      const [statsData, logsData] = await Promise.all([
+      const [statsData, logsData, providersData] = await Promise.all([
         systemApi.getStats(),
-        logsApi.getLogs({ page: 1, pageSize: 5 })
-      ])
-      setStats(statsData)
+        logsApi.getLogs({ page: 1, pageSize: 5 }),
+        api.get('/admin/providers') as Promise<Provider[]>,
+      ]);
+      
+      const providerMap = new Map(providersData.map(p => [p.id, p.name]));
+      
+      if (statsData.providers) {
+        statsData.providers.forEach(p => {
+          p.providerName = providerMap.get(p.providerId) || p.providerName;
+        });
+      }
+      
+      setStats(statsData);
       setRecentLogs(logsData.data.map((log: any) => ({
-      	id: log.id,
-      	model: log.model,
-      	providerName: log.providerName,
-      	statusCode: log.statusCode,
-      	createdAt: log.createdAt
-      })))
+        id: log.id,
+        model: log.model,
+        providerName: providerMap.get(log.providerId) || log.provider,
+        statusCode: log.statusCode,
+        createdAt: log.createdAt,
+      })));
     } catch (error) {
       console.error('加载数据失败:', error)
     } finally {
