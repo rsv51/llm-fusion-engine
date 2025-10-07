@@ -78,8 +78,12 @@ func (h *LogHandler) GetLogs(c *gin.Context) {
 func (h *LogHandler) GetLog(c *gin.Context) {
 	var log database.Log
 	id := c.Param("id")
-	if err := h.db.First(&log, id).Error; err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Log not found"})
+	if err := h.db.Where("id = ?", id).First(&log).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Log not found"})
+		} else {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve log"})
+		}
 		return
 	}
 	c.JSON(http.StatusOK, log)

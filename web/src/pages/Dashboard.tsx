@@ -46,22 +46,16 @@ export const Dashboard: React.FC = () => {
 
   const loadData = async () => {
     try {
-      const [statsData, logsData, providersResponse] = await Promise.all([
+      const [statsData, logsData] = await Promise.all([
         systemApi.getStats(),
         logsApi.getLogs({ page: 1, pageSize: 5 }),
-        api.get('/admin/providers'),
       ]);
       
-      // Handle pagination response for providers
-      const providersData = Array.isArray(providersResponse)
-        ? providersResponse
-        : (providersResponse.data || []);
-      
-      const providerMap = new Map(providersData.map((p: Provider) => [p.id, p.name]));
-      
+      // Stats already contain provider names from the database
+      // No need to map provider IDs since logs store provider names directly
       if (statsData.providers) {
-        statsData.providers.forEach(p => {
-          p.providerName = (providerMap.get(p.providerId) || p.providerName) as string;
+        statsData.providers.forEach((p: any) => {
+          p.providerName = p.provider || '未知提供商';
         });
       }
       
@@ -69,9 +63,9 @@ export const Dashboard: React.FC = () => {
       setRecentLogs(logsData.data.map((log: any) => ({
         id: log.id,
         model: log.model,
-        providerName: providerMap.get(log.providerId) || log.provider,
-        statusCode: log.statusCode,
-        createdAt: log.createdAt,
+        providerName: log.provider || '未知提供商',
+        statusCode: log.response_status,
+        createdAt: log.timestamp,
       })));
     } catch (error) {
       console.error('加载数据失败:', error)
