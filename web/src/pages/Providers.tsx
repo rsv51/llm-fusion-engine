@@ -8,7 +8,8 @@ import { modelsApi } from '../services/models'
 export const Providers: React.FC = () => {
   const [providers, setProviders] = useState<Provider[]>([])
   const [loading, setLoading] = useState(true)
-  const [pagination, setPagination] = useState({ page: 1, pageSize: 20, total: 0, totalPage: 1 })
+  const [page, setPage] = useState(1)
+  const [totalPages, setTotalPages] = useState(1)
   const [searchQuery, setSearchQuery] = useState('')
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [editingProvider, setEditingProvider] = useState<Provider | null>(null)
@@ -19,18 +20,28 @@ export const Providers: React.FC = () => {
   const [importing, setImporting] = useState(false)
 
   useEffect(() => {
-    loadProviders()
+    loadProviders(1)
   }, [])
 
-  const loadProviders = async (page = 1, pageSize = 20) => {
+  const pickData = (resp: any) => {
+    if (!resp) return { data: [], pagination: {} };
+    if (Array.isArray(resp.data) && resp.pagination) return resp;
+    if (Array.isArray(resp.items)) return { data: resp.items, pagination: { page: resp.page, totalPage: resp.totalPages } };
+    if (Array.isArray(resp)) return { data: resp, pagination: {} };
+    return { data: [], pagination: {} };
+  };
+
+  const loadProviders = async (pageNum: number) => {
     setError(null);
     setLoading(true);
     try {
-      const response = await api.get<PaginationResponse<Provider>>('/admin/providers', {
-        params: { page, pageSize },
-      }) as unknown as PaginationResponse<Provider>;
-      setProviders(response.data);
-      setPagination(response.pagination);
+      const response = await api.get('/admin/providers', {
+        params: { page: pageNum, pageSize: 20 },
+      });
+      const { data, pagination } = pickData(response);
+      setProviders(data);
+      setPage(pagination?.page || 1);
+      setTotalPages(pagination?.totalPage || 1);
     } catch (error: any) {
       console.error('加载供应商失败:', error);
       setError(error.message || JSON.stringify(error));
@@ -54,7 +65,7 @@ export const Providers: React.FC = () => {
 
     try {
       await api.delete(`/admin/providers/${id}`)
-      await loadProviders()
+      await loadProviders(page)
     } catch (error) {
       console.error('删除供应商失败:', error)
       alert('删除失败,请重试')
@@ -69,7 +80,7 @@ export const Providers: React.FC = () => {
         await api.post('/admin/providers', formData)
       }
       setIsModalOpen(false)
-      await loadProviders()
+      await loadProviders(page)
     } catch (error) {
       console.error('保存供应商失败:', error)
       alert('保存失败,请重试')
@@ -85,14 +96,10 @@ export const Providers: React.FC = () => {
     );
   }, [providers, searchQuery]);
 
-  const handlePageChange = (newPage: number) => {
-    loadProviders(newPage, pagination.pageSize);
-  };
-
   const handleCheckHealth = async (id: number) => {
     try {
       await api.post(`/admin/health/providers/${id}`)
-      await loadProviders()
+      await loadProviders(page)
     } catch (error) {
       console.error('健康检查失败:', error)
     }
@@ -311,24 +318,15 @@ export const Providers: React.FC = () => {
         </>
       )}
 
-      {pagination.totalPage > 1 && (
-        <div className="flex items-center justify-between mt-4">
-          <div className="text-sm text-gray-700">
-            共 {pagination.total} 条记录
-          </div>
-          <div className="flex gap-2">
-            <Button onClick={() => handlePageChange(pagination.page - 1)} disabled={pagination.page <= 1}>
-              上一页
-            </Button>
-            <span className="px-3 py-1 text-sm text-gray-700">
-              第 {pagination.page} / {pagination.totalPage} 页
-            </span>
-            <Button onClick={() => handlePageChange(pagination.page + 1)} disabled={pagination.page >= pagination.totalPage}>
-              下一页
-            </Button>
-          </div>
-        </div>
-      )}
+      <div className="flex justify-center items-center gap-4">
+        <Button onClick={() => loadProviders(page - 1)} disabled={page <= 1}>
+          上一页
+        </Button>
+        <span>第 {page} / {totalPages} 页</span>
+        <Button onClick={() => loadProviders(page + 1)} disabled={page >= totalPages}>
+          下一页
+        </Button>
+      </div>
 
       <ProviderModal
         isOpen={isModalOpen}

@@ -9,7 +9,8 @@ export const ModelMappings: React.FC = () => {
   const [models, setModels] = useState<Model[]>([]);
   const [providers, setProviders] = useState<Provider[]>([]);
   const [loading, setLoading] = useState(true);
-  const [pagination, setPagination] = useState({ page: 1, pageSize: 20, total: 0, totalPage: 1 });
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingMapping, setEditingMapping] = useState<ModelProviderMapping | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -20,7 +21,7 @@ export const ModelMappings: React.FC = () => {
   const [healthStatusData, setHealthStatusData] = useState<Record<number, any[]>>({});
 
   useEffect(() => {
-    loadData();
+    loadData(1);
     loadHealthStatus();
   }, []);
 
@@ -32,12 +33,12 @@ export const ModelMappings: React.FC = () => {
     return { data: [], pagination: {} };
   };
 
-  const loadData = async (page = 1, pageSize = 20) => {
+  const loadData = async (pageNum: number) => {
     setError(null);
     setLoading(true);
     try {
       const [mappingsResponse, modelsResponse, providersResponse] = await Promise.all([
-        api.get('/admin/model-provider-mappings', { params: { page, pageSize } }),
+        api.get('/admin/model-provider-mappings', { params: { page: pageNum, pageSize: 20 } }),
         api.get('/admin/models', { params: { page: 1, pageSize: 1000 } }),
         api.get('/admin/providers', { params: { page: 1, pageSize: 1000 } }),
       ]);
@@ -47,12 +48,8 @@ export const ModelMappings: React.FC = () => {
       const { data: providersData } = pickData(providersResponse);
 
       setMappings(mappingsData || []);
-      setPagination({
-        page: mappingsPagination?.page || 1,
-        pageSize: mappingsPagination?.pageSize || 20,
-        total: mappingsPagination?.total || 0,
-        totalPage: mappingsPagination?.totalPage || 1,
-      });
+      setPage(mappingsPagination?.page || 1);
+      setTotalPages(mappingsPagination?.totalPage || 1);
       setModels(modelsData || []);
       setProviders(providersData || []);
     } catch (error: any) {
@@ -86,7 +83,7 @@ export const ModelMappings: React.FC = () => {
     if (!window.confirm('确定要删除此模型映射吗?')) return;
     try {
       await api.delete(`/admin/model-provider-mappings/${id}`);
-      await loadData();
+      await loadData(page);
     } catch (error) {
       console.error('删除失败:', error);
     }
@@ -100,7 +97,7 @@ export const ModelMappings: React.FC = () => {
         await api.post('/admin/model-provider-mappings', formData);
       }
       setIsModalOpen(false);
-      await loadData();
+      await loadData(page);
     } catch (error) {
       console.error('保存失败:', error);
     }
@@ -117,10 +114,6 @@ export const ModelMappings: React.FC = () => {
       mapping.providerModel?.toLowerCase().includes(query)
     ));
   }, [mappings, searchQuery]);
-
-  const handlePageChange = (newPage: number) => {
-    loadData(newPage, pagination.pageSize);
-  };
 
   return (
     <div className="space-y-6">
@@ -237,24 +230,15 @@ export const ModelMappings: React.FC = () => {
         </>
       )}
 
-      {pagination.totalPage > 1 && (
-        <div className="flex items-center justify-between mt-4">
-          <div className="text-sm text-gray-700">
-            共 {pagination.total} 条记录
-          </div>
-          <div className="flex gap-2">
-            <Button onClick={() => handlePageChange(pagination.page - 1)} disabled={pagination.page <= 1}>
-              上一页
-            </Button>
-            <span className="px-3 py-1 text-sm text-gray-700">
-              第 {pagination.page} / {pagination.totalPage} 页
-            </span>
-            <Button onClick={() => handlePageChange(pagination.page + 1)} disabled={pagination.page >= pagination.totalPage}>
-              下一页
-            </Button>
-          </div>
-        </div>
-      )}
+      <div className="flex justify-center items-center gap-4">
+        <Button onClick={() => loadData(page - 1)} disabled={page <= 1}>
+          上一页
+        </Button>
+        <span>第 {page} / {totalPages} 页</span>
+        <Button onClick={() => loadData(page + 1)} disabled={page >= totalPages}>
+          下一页
+        </Button>
+      </div>
 
       <ModelMappingModal
         isOpen={isModalOpen}
