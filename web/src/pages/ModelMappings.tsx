@@ -24,17 +24,12 @@ export const ModelMappings: React.FC = () => {
     loadHealthStatus();
   }, []);
 
-  // 统一提取列表数据,兼容多种后端返回格式:
-  // - 直接数组: [...]
-  // - 顶层 items: { items: [...] }
-  // - data: 数组: { data: [...] }
-  // - data.items: { data: { items: [...] } }
-  const pickList = (resp: any) => {
-    if (Array.isArray(resp)) return resp;
-    if (resp && Array.isArray(resp.data)) return resp.data;
-    if (resp && Array.isArray(resp.items)) return resp.items;
-    if (resp && resp.data && Array.isArray(resp.data.items)) return resp.data.items;
-    return null;
+  const pickData = (resp: any) => {
+    if (!resp) return { data: [], pagination: {} };
+    if (Array.isArray(resp.data) && resp.pagination) return resp;
+    if (Array.isArray(resp.items)) return { data: resp.items, pagination: { page: resp.page, totalPage: resp.totalPages } };
+    if (Array.isArray(resp)) return { data: resp, pagination: {} };
+    return { data: [], pagination: {} };
   };
 
   const loadData = async (page = 1, pageSize = 20) => {
@@ -47,17 +42,19 @@ export const ModelMappings: React.FC = () => {
         api.get('/admin/providers', { params: { page: 1, pageSize: 1000 } }),
       ]);
 
-      const mappingsData = pickList(mappingsResponse) || [];
-      const modelsData = pickList(modelsResponse) || [];
-      const providersData = pickList(providersResponse) || [];
+      const { data: mappingsData, pagination: mappingsPagination } = pickData(mappingsResponse);
+      const { data: modelsData } = pickData(modelsResponse);
+      const { data: providersData } = pickData(providersResponse);
 
-      setMappings(mappingsData);
-      // Correctly handle pagination from the response
-      if (mappingsResponse && (mappingsResponse as any).pagination) {
-        setPagination((mappingsResponse as any).pagination);
-      }
-      setModels(modelsData);
-      setProviders(providersData);
+      setMappings(mappingsData || []);
+      setPagination({
+        page: mappingsPagination?.page || 1,
+        pageSize: mappingsPagination?.pageSize || 20,
+        total: mappingsPagination?.total || 0,
+        totalPage: mappingsPagination?.totalPage || 1,
+      });
+      setModels(modelsData || []);
+      setProviders(providersData || []);
     } catch (error: any) {
       console.error('加载数据失败:', error);
       setError(error.message || JSON.stringify(error));
