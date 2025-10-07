@@ -262,27 +262,32 @@ interface ModelMappingModalProps {
 }
 
 const ModelMappingModal: React.FC<ModelMappingModalProps> = ({ isOpen, onClose, onSubmit, mapping, models, providers }) => {
-  const getInitialFormData = (): Partial<ModelProviderMapping> => {
-    if (mapping) {
-      return mapping;
-    }
-    
-    return {
-      modelId: models[0]?.id || 0,
-      providerId: providers[0]?.id || 0,
-      providerModel: '',
-      toolCall: false,
-      structuredOutput: false,
-      image: false,
-      weight: 1,
-      enabled: true,
-    };
-  };
-
-  const [formData, setFormData] = useState<Partial<ModelProviderMapping>>(getInitialFormData());
+  const [formData, setFormData] = useState<Partial<ModelProviderMapping>>({
+    modelId: 0,
+    providerId: 0,
+    providerModel: '',
+    toolCall: false,
+    structuredOutput: false,
+    image: false,
+    weight: 1,
+    enabled: true,
+  });
 
   useEffect(() => {
-    setFormData(getInitialFormData());
+    if (mapping) {
+      setFormData(mapping);
+    } else {
+      setFormData({
+        modelId: models[0]?.id || 0,
+        providerId: providers[0]?.id || 0,
+        providerModel: '',
+        toolCall: false,
+        structuredOutput: false,
+        image: false,
+        weight: 1,
+        enabled: true,
+      });
+    }
   }, [mapping, models, providers]);
 
   const handleSubmit = (e: React.FormEvent) => {
