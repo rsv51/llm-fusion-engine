@@ -55,109 +55,25 @@ func (hc *HealthChecker) CheckProvider(providerID uint) error {
 	// Get API key from config
 	apiKey, _ := config["apiKey"].(string)
 	
-	// Step 1: Get first available model from /v1/models
-	modelsURL := strings.TrimSuffix(baseURL, "/") + "/v1/models"
-	log.Printf("[HealthCheck] Provider ID=%d, Name=%s, Step 1: Getting models from %s", providerID, provider.Name, modelsURL)
-	
-	modelsReq, err := http.NewRequest("GET", modelsURL, nil)
-	if err != nil {
-		log.Printf("[HealthCheck] Provider ID=%d: Failed to create models request: %v", providerID, err)
-		now := time.Now()
-		provider.HealthStatus = "unhealthy"
-		provider.Latency = nil
-		provider.LastChecked = &now
-		hc.db.Save(&provider)
-		return err
+	// Use a default model for testing based on provider type
+	// Many proxy services don't support /v1/models endpoint reliably
+	var testModel string
+	switch strings.ToLower(provider.Type) {
+	case "anthropic":
+		testModel = "claude-3-haiku-20240307"
+	case "gemini":
+		testModel = "gemini-1.5-flash"
+	default:
+		testModel = "gpt-3.5-turbo" // Default for OpenAI-compatible APIs
 	}
 	
-	if apiKey != "" {
-		modelsReq.Header.Set("Authorization", "Bearer "+apiKey)
-	}
+	log.Printf("[HealthCheck] Provider ID=%d, Name=%s, Type=%s, Using default test model: %s",
+		providerID, provider.Name, provider.Type, testModel)
 	
-	client := &http.Client{Timeout: 10 * time.Second}
-	modelsResp, err := client.Do(modelsReq)
-	if err != nil {
-		log.Printf("[HealthCheck] Provider ID=%d: Models request error: %v", providerID, err)
-		now := time.Now()
-		provider.HealthStatus = "unhealthy"
-		provider.Latency = nil
-		provider.LastChecked = &now
-		hc.db.Save(&provider)
-		return err
-	}
-	defer modelsResp.Body.Close()
-	
-	modelsBody, _ := io.ReadAll(modelsResp.Body)
-	log.Printf("[HealthCheck] Provider ID=%d: Models response status=%d, body=%s",
-		providerID, modelsResp.StatusCode, string(modelsBody))
-	
-	if modelsResp.StatusCode < 200 || modelsResp.StatusCode >= 300 {
-		log.Printf("[HealthCheck] Provider ID=%d: Models endpoint returned non-2xx status", providerID)
-		now := time.Now()
-		statusCode := modelsResp.StatusCode
-		if statusCode == 401 || statusCode == 403 {
-			provider.HealthStatus = "degraded"
-		} else {
-			provider.HealthStatus = "unhealthy"
-		}
-		provider.Latency = nil
-		provider.LastStatusCode = &statusCode
-		provider.LastChecked = &now
-		hc.db.Save(&provider)
-		return fmt.Errorf("models endpoint failed with status: %d", statusCode)
-	}
-	
-	// Parse models response to get first model
-	var modelsData map[string]interface{}
-	if err := json.Unmarshal(modelsBody, &modelsData); err != nil {
-		log.Printf("[HealthCheck] Provider ID=%d: Failed to parse models response: %v", providerID, err)
-		now := time.Now()
-		provider.HealthStatus = "unhealthy"
-		provider.Latency = nil
-		provider.LastChecked = &now
-		hc.db.Save(&provider)
-		return err
-	}
-	
-	dataList, ok := modelsData["data"].([]interface{})
-	if !ok || len(dataList) == 0 {
-		log.Printf("[HealthCheck] Provider ID=%d: No models found in response", providerID)
-		now := time.Now()
-		provider.HealthStatus = "unhealthy"
-		provider.Latency = nil
-		provider.LastChecked = &now
-		hc.db.Save(&provider)
-		return fmt.Errorf("no models available")
-	}
-	
-	firstModel, ok := dataList[0].(map[string]interface{})
-	if !ok {
-		log.Printf("[HealthCheck] Provider ID=%d: Invalid model data format", providerID)
-		now := time.Now()
-		provider.HealthStatus = "unhealthy"
-		provider.Latency = nil
-		provider.LastChecked = &now
-		hc.db.Save(&provider)
-		return fmt.Errorf("invalid model format")
-	}
-	
-	modelID, ok := firstModel["id"].(string)
-	if !ok || modelID == "" {
-		log.Printf("[HealthCheck] Provider ID=%d: No model ID found", providerID)
-		now := time.Now()
-		provider.HealthStatus = "unhealthy"
-		provider.Latency = nil
-		provider.LastChecked = &now
-		hc.db.Save(&provider)
-		return fmt.Errorf("no model ID")
-	}
-	
-	log.Printf("[HealthCheck] Provider ID=%d: Using model '%s' for test", providerID, modelID)
-	
-	// Step 2: Send chat completion request with "hi"
-	chatURL := strings.TrimSuffix(baseURL, "/") + "/v1/chat/completions"
+	// Send chat completion request with "hi" directly
+	chatURL := strings.TrimSuffix(baseURL, "/") + "/chat/completions"
 	chatPayload := map[string]interface{}{
-		"model": modelID,
+		"model": testModel,
 		"messages": []map[string]string{
 			{"role": "user", "content": "hi"},
 		},
@@ -175,7 +91,7 @@ func (hc *HealthChecker) CheckProvider(providerID uint) error {
 		return err
 	}
 	
-	log.Printf("[HealthCheck] Provider ID=%d, Step 2: Sending chat request to %s", providerID, chatURL)
+	log.Printf("[HealthCheck] Provider ID=%d: Sending chat request to %s with model %s", providerID, chatURL, testModel)
 	
 	chatReq, err := http.NewRequest("POST", chatURL, strings.NewReader(string(chatBody)))
 	if err != nil {
@@ -194,6 +110,7 @@ func (hc *HealthChecker) CheckProvider(providerID uint) error {
 	}
 	
 	// Measure latency for chat request
+	client := &http.Client{Timeout: 10 * time.Second}
 	startTime := time.Now()
 	resp, err := client.Do(chatReq)
 	latency := time.Since(startTime).Milliseconds()
