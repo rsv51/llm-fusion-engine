@@ -1,9 +1,12 @@
 package services
 
 import (
+	"bytes"
 	"encoding/json"
+	"fmt"
 	"llm-fusion-engine/internal/database"
 	"net/http"
+	"strings"
 	"time"
 
 	"gorm.io/gorm"
@@ -48,9 +51,32 @@ func (hc *HealthChecker) CheckProvider(providerID uint) error {
 		return nil
 	}
 
-	// Send a test request to the provider's BaseURL and measure latency
+	// Get API key from config
+	apiKey, _ := config["apiKey"].(string)
+	
+	// For OpenAI-compatible APIs, test the /v1/models endpoint
+	modelsURL := strings.TrimSuffix(baseURL, "/") + "/v1/models"
+	
+	// Create request
+	req, err := http.NewRequest("GET", modelsURL, nil)
+	if err != nil {
+		now := time.Now()
+		provider.HealthStatus = "unhealthy"
+		provider.Latency = nil
+		provider.LastChecked = &now
+		hc.db.Save(&provider)
+		return err
+	}
+	
+	// Add authorization header if API key exists
+	if apiKey != "" {
+		req.Header.Set("Authorization", "Bearer "+apiKey)
+	}
+	
+	// Send request and measure latency
 	startTime := time.Now()
-	resp, err := http.Get(baseURL)
+	client := &http.Client{Timeout: 10 * time.Second}
+	resp, err := client.Do(req)
 	latency := time.Since(startTime).Milliseconds()
 	now := time.Now()
 
@@ -65,7 +91,8 @@ func (hc *HealthChecker) CheckProvider(providerID uint) error {
 	defer resp.Body.Close()
 
 	// Update health status based on response
-	if resp.StatusCode >= 200 && resp.StatusCode < 400 {
+	// Accept 200-299 as healthy, anything else as unhealthy
+	if resp.StatusCode >= 200 && resp.StatusCode < 300 {
 		provider.HealthStatus = "healthy"
 		provider.Latency = &latency
 		provider.LastChecked = &now
@@ -75,6 +102,8 @@ func (hc *HealthChecker) CheckProvider(providerID uint) error {
 		provider.Latency = &latency
 		provider.LastChecked = &now
 		hc.db.Save(&provider)
+		// Return error with status code for debugging
+		return fmt.Errorf("health check failed with status code: %d", resp.StatusCode)
 	}
 
 	return nil
