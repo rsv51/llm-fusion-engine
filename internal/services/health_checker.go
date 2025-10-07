@@ -55,15 +55,13 @@ func (hc *HealthChecker) CheckProvider(providerID uint) error {
 	// Get API key from config
 	apiKey, _ := config["apiKey"].(string)
 	
-	// For OpenAI-compatible APIs, test the /v1/models endpoint
+	// Step 1: Get first available model from /v1/models
 	modelsURL := strings.TrimSuffix(baseURL, "/") + "/v1/models"
+	log.Printf("[HealthCheck] Provider ID=%d, Name=%s, Step 1: Getting models from %s", providerID, provider.Name, modelsURL)
 	
-	log.Printf("[HealthCheck] Provider ID=%d, Name=%s, Testing URL: %s", providerID, provider.Name, modelsURL)
-	
-	// Create request
-	req, err := http.NewRequest("GET", modelsURL, nil)
+	modelsReq, err := http.NewRequest("GET", modelsURL, nil)
 	if err != nil {
-		log.Printf("[HealthCheck] Provider ID=%d: Failed to create request: %v", providerID, err)
+		log.Printf("[HealthCheck] Provider ID=%d: Failed to create models request: %v", providerID, err)
 		now := time.Now()
 		provider.HealthStatus = "unhealthy"
 		provider.Latency = nil
@@ -72,24 +70,137 @@ func (hc *HealthChecker) CheckProvider(providerID uint) error {
 		return err
 	}
 	
-	// Add authorization header if API key exists
 	if apiKey != "" {
-		req.Header.Set("Authorization", "Bearer "+apiKey)
-		log.Printf("[HealthCheck] Provider ID=%d: Using API key authentication", providerID)
-	} else {
-		log.Printf("[HealthCheck] Provider ID=%d: No API key found in config", providerID)
+		modelsReq.Header.Set("Authorization", "Bearer "+apiKey)
 	}
 	
-	// Send request and measure latency
-	startTime := time.Now()
 	client := &http.Client{Timeout: 10 * time.Second}
-	resp, err := client.Do(req)
+	modelsResp, err := client.Do(modelsReq)
+	if err != nil {
+		log.Printf("[HealthCheck] Provider ID=%d: Models request error: %v", providerID, err)
+		now := time.Now()
+		provider.HealthStatus = "unhealthy"
+		provider.Latency = nil
+		provider.LastChecked = &now
+		hc.db.Save(&provider)
+		return err
+	}
+	defer modelsResp.Body.Close()
+	
+	modelsBody, _ := io.ReadAll(modelsResp.Body)
+	log.Printf("[HealthCheck] Provider ID=%d: Models response status=%d, body=%s",
+		providerID, modelsResp.StatusCode, string(modelsBody))
+	
+	if modelsResp.StatusCode < 200 || modelsResp.StatusCode >= 300 {
+		log.Printf("[HealthCheck] Provider ID=%d: Models endpoint returned non-2xx status", providerID)
+		now := time.Now()
+		statusCode := modelsResp.StatusCode
+		if statusCode == 401 || statusCode == 403 {
+			provider.HealthStatus = "degraded"
+		} else {
+			provider.HealthStatus = "unhealthy"
+		}
+		provider.Latency = nil
+		provider.LastStatusCode = &statusCode
+		provider.LastChecked = &now
+		hc.db.Save(&provider)
+		return fmt.Errorf("models endpoint failed with status: %d", statusCode)
+	}
+	
+	// Parse models response to get first model
+	var modelsData map[string]interface{}
+	if err := json.Unmarshal(modelsBody, &modelsData); err != nil {
+		log.Printf("[HealthCheck] Provider ID=%d: Failed to parse models response: %v", providerID, err)
+		now := time.Now()
+		provider.HealthStatus = "unhealthy"
+		provider.Latency = nil
+		provider.LastChecked = &now
+		hc.db.Save(&provider)
+		return err
+	}
+	
+	dataList, ok := modelsData["data"].([]interface{})
+	if !ok || len(dataList) == 0 {
+		log.Printf("[HealthCheck] Provider ID=%d: No models found in response", providerID)
+		now := time.Now()
+		provider.HealthStatus = "unhealthy"
+		provider.Latency = nil
+		provider.LastChecked = &now
+		hc.db.Save(&provider)
+		return fmt.Errorf("no models available")
+	}
+	
+	firstModel, ok := dataList[0].(map[string]interface{})
+	if !ok {
+		log.Printf("[HealthCheck] Provider ID=%d: Invalid model data format", providerID)
+		now := time.Now()
+		provider.HealthStatus = "unhealthy"
+		provider.Latency = nil
+		provider.LastChecked = &now
+		hc.db.Save(&provider)
+		return fmt.Errorf("invalid model format")
+	}
+	
+	modelID, ok := firstModel["id"].(string)
+	if !ok || modelID == "" {
+		log.Printf("[HealthCheck] Provider ID=%d: No model ID found", providerID)
+		now := time.Now()
+		provider.HealthStatus = "unhealthy"
+		provider.Latency = nil
+		provider.LastChecked = &now
+		hc.db.Save(&provider)
+		return fmt.Errorf("no model ID")
+	}
+	
+	log.Printf("[HealthCheck] Provider ID=%d: Using model '%s' for test", providerID, modelID)
+	
+	// Step 2: Send chat completion request with "hi"
+	chatURL := strings.TrimSuffix(baseURL, "/") + "/v1/chat/completions"
+	chatPayload := map[string]interface{}{
+		"model": modelID,
+		"messages": []map[string]string{
+			{"role": "user", "content": "hi"},
+		},
+		"max_tokens": 10,
+	}
+	
+	chatBody, err := json.Marshal(chatPayload)
+	if err != nil {
+		log.Printf("[HealthCheck] Provider ID=%d: Failed to marshal chat request: %v", providerID, err)
+		now := time.Now()
+		provider.HealthStatus = "unhealthy"
+		provider.Latency = nil
+		provider.LastChecked = &now
+		hc.db.Save(&provider)
+		return err
+	}
+	
+	log.Printf("[HealthCheck] Provider ID=%d, Step 2: Sending chat request to %s", providerID, chatURL)
+	
+	chatReq, err := http.NewRequest("POST", chatURL, strings.NewReader(string(chatBody)))
+	if err != nil {
+		log.Printf("[HealthCheck] Provider ID=%d: Failed to create chat request: %v", providerID, err)
+		now := time.Now()
+		provider.HealthStatus = "unhealthy"
+		provider.Latency = nil
+		provider.LastChecked = &now
+		hc.db.Save(&provider)
+		return err
+	}
+	
+	chatReq.Header.Set("Content-Type", "application/json")
+	if apiKey != "" {
+		chatReq.Header.Set("Authorization", "Bearer "+apiKey)
+	}
+	
+	// Measure latency for chat request
+	startTime := time.Now()
+	resp, err := client.Do(chatReq)
 	latency := time.Since(startTime).Milliseconds()
 	now := time.Now()
 
 	if err != nil {
-		log.Printf("[HealthCheck] Provider ID=%d: Request error: %v", providerID, err)
-		// Update as unhealthy due to request error
+		log.Printf("[HealthCheck] Provider ID=%d: Chat request error: %v", providerID, err)
 		provider.HealthStatus = "unhealthy"
 		provider.Latency = nil
 		provider.LastChecked = &now
@@ -98,25 +209,85 @@ func (hc *HealthChecker) CheckProvider(providerID uint) error {
 	}
 	defer resp.Body.Close()
 
-	// Read response body for debugging
+	// Read chat response for debugging
 	body, _ := io.ReadAll(resp.Body)
-	log.Printf("[HealthCheck] Provider ID=%d: Status=%d, Latency=%dms, Body=%s",
+	log.Printf("[HealthCheck] Provider ID=%d: Chat response status=%d, latency=%dms, body=%s",
 		providerID, resp.StatusCode, latency, string(body))
 
-	// Update health status based on response
+	// Validate chat response
 	statusCode := resp.StatusCode
 	
-	// Determine health status with improved logic
 	if statusCode >= 200 && statusCode < 300 {
-		log.Printf("[HealthCheck] Provider ID=%d: Marked as HEALTHY (status %d)", providerID, statusCode)
+		// Parse response to verify we got actual content
+		var chatResponse map[string]interface{}
+		if err := json.Unmarshal(body, &chatResponse); err != nil {
+			log.Printf("[HealthCheck] Provider ID=%d: Failed to parse chat response: %v", providerID, err)
+			provider.HealthStatus = "degraded"
+			provider.Latency = &latency
+			provider.LastStatusCode = &statusCode
+			provider.LastChecked = &now
+			hc.db.Save(&provider)
+			return fmt.Errorf("invalid chat response format")
+		}
+		
+		// Check if response has content (indicates successful generation)
+		choices, ok := chatResponse["choices"].([]interface{})
+		if !ok || len(choices) == 0 {
+			log.Printf("[HealthCheck] Provider ID=%d: No choices in chat response", providerID)
+			provider.HealthStatus = "degraded"
+			provider.Latency = &latency
+			provider.LastStatusCode = &statusCode
+			provider.LastChecked = &now
+			hc.db.Save(&provider)
+			return fmt.Errorf("no response content")
+		}
+		
+		firstChoice, ok := choices[0].(map[string]interface{})
+		if !ok {
+			log.Printf("[HealthCheck] Provider ID=%d: Invalid choice format", providerID)
+			provider.HealthStatus = "degraded"
+			provider.Latency = &latency
+			provider.LastStatusCode = &statusCode
+			provider.LastChecked = &now
+			hc.db.Save(&provider)
+			return fmt.Errorf("invalid choice format")
+		}
+		
+		message, ok := firstChoice["message"].(map[string]interface{})
+		if !ok {
+			log.Printf("[HealthCheck] Provider ID=%d: No message in choice", providerID)
+			provider.HealthStatus = "degraded"
+			provider.Latency = &latency
+			provider.LastStatusCode = &statusCode
+			provider.LastChecked = &now
+			hc.db.Save(&provider)
+			return fmt.Errorf("no message content")
+		}
+		
+		content, ok := message["content"].(string)
+		if !ok || content == "" {
+			log.Printf("[HealthCheck] Provider ID=%d: Empty content in response", providerID)
+			provider.HealthStatus = "degraded"
+			provider.Latency = &latency
+			provider.LastStatusCode = &statusCode
+			provider.LastChecked = &now
+			hc.db.Save(&provider)
+			return fmt.Errorf("empty response content")
+		}
+		
+		// Success - provider responded with actual content
+		log.Printf("[HealthCheck] Provider ID=%d: HEALTHY - Got valid response: '%s' (latency: %dms)",
+			providerID, content, latency)
 		provider.HealthStatus = "healthy"
 		provider.Latency = &latency
 		provider.LastStatusCode = &statusCode
 		provider.LastChecked = &now
 		hc.db.Save(&provider)
+		return nil
+		
 	} else if statusCode == 401 || statusCode == 403 {
-		// Authentication/authorization errors - provider is reachable but credentials may be invalid
-		log.Printf("[HealthCheck] Provider ID=%d: Marked as DEGRADED (status %d - auth issue)", providerID, statusCode)
+		// Authentication/authorization errors
+		log.Printf("[HealthCheck] Provider ID=%d: DEGRADED (status %d - auth issue)", providerID, statusCode)
 		provider.HealthStatus = "degraded"
 		provider.Latency = &latency
 		provider.LastStatusCode = &statusCode
@@ -124,7 +295,7 @@ func (hc *HealthChecker) CheckProvider(providerID uint) error {
 		hc.db.Save(&provider)
 		return fmt.Errorf("authentication/authorization failed with status code: %d", statusCode)
 	} else {
-		log.Printf("[HealthCheck] Provider ID=%d: Marked as UNHEALTHY (status %d)", providerID, statusCode)
+		log.Printf("[HealthCheck] Provider ID=%d: UNHEALTHY (status %d)", providerID, statusCode)
 		provider.HealthStatus = "unhealthy"
 		provider.Latency = &latency
 		provider.LastStatusCode = &statusCode
@@ -132,8 +303,6 @@ func (hc *HealthChecker) CheckProvider(providerID uint) error {
 		hc.db.Save(&provider)
 		return fmt.Errorf("health check failed with status code: %d", statusCode)
 	}
-
-	return nil
 }
 
 // CheckAllProviders checks the health of all providers
