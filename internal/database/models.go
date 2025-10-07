@@ -51,14 +51,17 @@ type Group struct {
 // Group-based routing can be implemented at a higher level if needed.
 type Provider struct {
 	BaseModel
-	Name         string `gorm:"uniqueIndex;not null" json:"name"` // e.g., "MyOpenAIInstance"
-	Type         string `gorm:"index;not null" json:"type"`     // e.g., openai, anthropic, gemini
-	Config       string `gorm:"type:text" json:"config"`       // JSON string for settings (e.g., {"apiKey": "...", "baseUrl": "...", "chatEndpoint": "v1/chat/completions"})
-	Console      string `gorm:"type:varchar(255)" json:"console"` // Optional console URL for the provider
-	Enabled      bool   `gorm:"default:true" json:"enabled"`
-	Priority     int    `gorm:"default:0" json:"priority"`      // Priority for failover (higher is first)
-	Weight       uint   `gorm:"default:100" json:"weight"`      // Weight for load balancing
-	Timeout      int    `gorm:"default:300" json:"timeout"`     // Timeout in seconds
+	Name         string     `gorm:"uniqueIndex;not null" json:"name"` // e.g., "MyOpenAIInstance"
+	Type         string     `gorm:"index;not null" json:"type"`     // e.g., openai, anthropic, gemini
+	Config       string     `gorm:"type:text" json:"config"`       // JSON string for settings (e.g., {"apiKey": "...", "baseUrl": "...", "chatEndpoint": "v1/chat/completions"})
+	Console      string     `gorm:"type:varchar(255)" json:"console"` // Optional console URL for the provider
+	Enabled      bool       `gorm:"default:true" json:"enabled"`
+	Priority     int        `gorm:"default:0" json:"priority"`      // Priority for failover (higher is first)
+	Weight       uint       `gorm:"default:100" json:"weight"`      // Weight for load balancing
+	Timeout      int        `gorm:"default:300" json:"timeout"`     // Timeout in seconds
+	HealthStatus string     `gorm:"type:varchar(50)" json:"healthStatus"` // Health status: healthy, unhealthy, unknown
+	Latency      *int64     `json:"latency"`                       // Latency in milliseconds (nullable)
+	LastChecked  *time.Time `json:"lastChecked"`                   // Last health check timestamp (nullable)
 }
 
 // ApiKey stores an individual API key for a provider.

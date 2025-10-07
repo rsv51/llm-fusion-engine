@@ -8,27 +8,28 @@ import { Search, Filter, RefreshCw } from 'lucide-react'
 export const Logs: React.FC = () => {
   const [logs, setLogs] = useState<Log[]>([])
   const [loading, setLoading] = useState(false)
-  const [pagination, setPagination] = useState({
-    page: 1,
-    pageSize: 20,
-    total: 0,
-    totalPage: 0
-  })
+  const [page, setPage] = useState(1)
+  const [totalPages, setTotalPages] = useState(1)
 
-  const fetchLogs = async (params?: { page?: number; pageSize?: number }) => {
+  const pickData = (resp: any) => {
+    if (!resp) return { data: [], pagination: {} };
+    if (Array.isArray(resp.data) && resp.pagination) return resp;
+    if (Array.isArray(resp.items)) return { data: resp.items, pagination: { page: resp.page, totalPage: resp.totalPages } };
+    if (Array.isArray(resp)) return { data: resp, pagination: {} };
+    return { data: [], pagination: {} };
+  };
+
+  const fetchLogs = async (pageNum: number) => {
     setLoading(true)
     try {
       const response = await logsApi.getLogs({
-        page: params?.page || pagination.page,
-        pageSize: params?.pageSize || pagination.pageSize
+        page: pageNum,
+        pageSize: 20
       })
-      setLogs(response.data)
-      setPagination({
-      	page: response.pagination.page,
-      	pageSize: response.pagination.pageSize,
-      	total: response.pagination.total,
-      	totalPage: response.pagination.totalPage
-      })
+      const { data, pagination } = pickData(response);
+      setLogs(data || [])
+      setPage(pagination?.page || 1)
+      setTotalPages(pagination?.totalPage || 1)
     } catch (error) {
       console.error('Failed to fetch logs:', error)
     } finally {
@@ -37,7 +38,7 @@ export const Logs: React.FC = () => {
   }
 
   useEffect(() => {
-    fetchLogs()
+    fetchLogs(1)
   }, [])
 
   const getStatusBadge = (isSuccess: boolean) => {
@@ -56,7 +57,7 @@ export const Logs: React.FC = () => {
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-gray-900">请求日志</h1>
         <button
-          onClick={() => fetchLogs()}
+          onClick={() => fetchLogs(page)}
           disabled={loading}
           className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
         >
@@ -135,32 +136,25 @@ export const Logs: React.FC = () => {
         </div>
 
         {/* 分页 */}
-        {pagination.totalPage > 1 && (
-          <div className="flex items-center justify-between px-4 py-3 border-t border-gray-200">
-            <div className="text-sm text-gray-700">
-              共 {pagination.total} 条记录
-            </div>
-            <div className="flex gap-2">
-              <button
-                onClick={() => fetchLogs({ page: pagination.page - 1, pageSize: pagination.pageSize })}
-                disabled={pagination.page === 1}
-                className="px-3 py-1 border border-gray-300 rounded hover:bg-gray-50 disabled:opacity-50"
-              >
-                上一页
-              </button>
-              <span className="px-3 py-1 text-sm text-gray-700">
-                第 {pagination.page} / {pagination.totalPage} 页
-              </span>
-              <button
-                onClick={() => fetchLogs({ page: pagination.page + 1, pageSize: pagination.pageSize })}
-                disabled={pagination.page === pagination.totalPage}
-                className="px-3 py-1 border border-gray-300 rounded hover:bg-gray-50 disabled:opacity-50"
-              >
-                下一页
-              </button>
-            </div>
-          </div>
-        )}
+        <div className="flex justify-center items-center gap-4 px-4 py-3 border-t border-gray-200">
+          <button
+            onClick={() => fetchLogs(page - 1)}
+            disabled={page <= 1}
+            className="px-3 py-1 border border-gray-300 rounded hover:bg-gray-50 disabled:opacity-50"
+          >
+            上一页
+          </button>
+          <span className="px-3 py-1 text-sm text-gray-700">
+            第 {page} / {totalPages} 页
+          </span>
+          <button
+            onClick={() => fetchLogs(page + 1)}
+            disabled={page >= totalPages}
+            className="px-3 py-1 border border-gray-300 rounded hover:bg-gray-50 disabled:opacity-50"
+          >
+            下一页
+          </button>
+        </div>
       </Card>
     </div>
   )
