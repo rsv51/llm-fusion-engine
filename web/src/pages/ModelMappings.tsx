@@ -63,9 +63,11 @@ export const ModelMappings: React.FC = () => {
   const loadHealthStatus = async () => {
     try {
       const response = await api.get<Record<number, any[]>>('/admin/model-provider-mappings/health/all');
-      setHealthStatusData(response.data || response);
+      const healthData = response.data || response;
+      setHealthStatusData(healthData && typeof healthData === 'object' ? healthData : {});
     } catch (error) {
       console.error('加载健康状态失败:', error);
+      setHealthStatusData({});
     }
   };
 
@@ -105,14 +107,18 @@ export const ModelMappings: React.FC = () => {
 
   // 过滤映射
   const filteredMappings = React.useMemo(() => {
+    if (!Array.isArray(mappings)) return [];
     if (!searchQuery.trim()) return mappings;
     
     const query = searchQuery.toLowerCase();
-    return mappings.filter(mapping => (
-      mapping.model?.name?.toLowerCase().includes(query) ||
-      mapping.provider?.name?.toLowerCase().includes(query) ||
-      mapping.providerModel?.toLowerCase().includes(query)
-    ));
+    return mappings.filter(mapping => {
+      if (!mapping) return false;
+      return (
+        mapping.model?.name?.toLowerCase().includes(query) ||
+        mapping.provider?.name?.toLowerCase().includes(query) ||
+        mapping.providerModel?.toLowerCase().includes(query)
+      );
+    });
   }, [mappings, searchQuery]);
 
   return (
@@ -167,7 +173,7 @@ export const ModelMappings: React.FC = () => {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-200">
-                    {filteredMappings.map((mapping) => (
+                    {filteredMappings.map((mapping) => mapping && (
                       <tr key={mapping.id} className="hover:bg-gray-50">
                         <td className="px-4 py-3">
                           <div className="font-medium text-gray-900">{mapping.model?.name || 'N/A'}</div>
@@ -189,7 +195,7 @@ export const ModelMappings: React.FC = () => {
                           <div className="text-sm text-gray-900">{mapping.weight}</div>
                         </td>
                         <td className="px-4 py-3">
-                          <HealthStatusIndicator healthStatus={healthStatusData[mapping.id] || []} />
+                          <HealthStatusIndicator healthStatus={healthStatusData?.[mapping?.id] || []} />
                         </td>
                         <td className="px-4 py-3">
                           <Badge variant={mapping.enabled ? 'success' : 'default'}>
@@ -462,7 +468,7 @@ interface HealthStatusIndicatorProps {
 }
 
 const HealthStatusIndicator: React.FC<HealthStatusIndicatorProps> = ({ healthStatus }) => {
-  if (!healthStatus || healthStatus.length === 0) {
+  if (!healthStatus || !Array.isArray(healthStatus) || healthStatus.length === 0) {
     return (
       <div className="flex items-center gap-1">
         <div className="text-xs text-gray-400">暂无数据</div>
