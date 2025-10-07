@@ -3,7 +3,9 @@ package services
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"llm-fusion-engine/internal/database"
+	"log"
 	"net/http"
 	"strings"
 	"time"
@@ -56,9 +58,12 @@ func (hc *HealthChecker) CheckProvider(providerID uint) error {
 	// For OpenAI-compatible APIs, test the /v1/models endpoint
 	modelsURL := strings.TrimSuffix(baseURL, "/") + "/v1/models"
 	
+	log.Printf("[HealthCheck] Provider ID=%d, Name=%s, Testing URL: %s", providerID, provider.Name, modelsURL)
+	
 	// Create request
 	req, err := http.NewRequest("GET", modelsURL, nil)
 	if err != nil {
+		log.Printf("[HealthCheck] Provider ID=%d: Failed to create request: %v", providerID, err)
 		now := time.Now()
 		provider.HealthStatus = "unhealthy"
 		provider.Latency = nil
@@ -70,6 +75,9 @@ func (hc *HealthChecker) CheckProvider(providerID uint) error {
 	// Add authorization header if API key exists
 	if apiKey != "" {
 		req.Header.Set("Authorization", "Bearer "+apiKey)
+		log.Printf("[HealthCheck] Provider ID=%d: Using API key authentication", providerID)
+	} else {
+		log.Printf("[HealthCheck] Provider ID=%d: No API key found in config", providerID)
 	}
 	
 	// Send request and measure latency
@@ -80,6 +88,7 @@ func (hc *HealthChecker) CheckProvider(providerID uint) error {
 	now := time.Now()
 
 	if err != nil {
+		log.Printf("[HealthCheck] Provider ID=%d: Request error: %v", providerID, err)
 		// Update as unhealthy due to request error
 		provider.HealthStatus = "unhealthy"
 		provider.Latency = nil
@@ -89,20 +98,39 @@ func (hc *HealthChecker) CheckProvider(providerID uint) error {
 	}
 	defer resp.Body.Close()
 
+	// Read response body for debugging
+	body, _ := io.ReadAll(resp.Body)
+	log.Printf("[HealthCheck] Provider ID=%d: Status=%d, Latency=%dms, Body=%s",
+		providerID, resp.StatusCode, latency, string(body))
+
 	// Update health status based on response
-	// Accept 200-299 as healthy, anything else as unhealthy
-	if resp.StatusCode >= 200 && resp.StatusCode < 300 {
+	statusCode := resp.StatusCode
+	
+	// Determine health status with improved logic
+	if statusCode >= 200 && statusCode < 300 {
+		log.Printf("[HealthCheck] Provider ID=%d: Marked as HEALTHY (status %d)", providerID, statusCode)
 		provider.HealthStatus = "healthy"
 		provider.Latency = &latency
+		provider.LastStatusCode = &statusCode
 		provider.LastChecked = &now
 		hc.db.Save(&provider)
+	} else if statusCode == 401 || statusCode == 403 {
+		// Authentication/authorization errors - provider is reachable but credentials may be invalid
+		log.Printf("[HealthCheck] Provider ID=%d: Marked as DEGRADED (status %d - auth issue)", providerID, statusCode)
+		provider.HealthStatus = "degraded"
+		provider.Latency = &latency
+		provider.LastStatusCode = &statusCode
+		provider.LastChecked = &now
+		hc.db.Save(&provider)
+		return fmt.Errorf("authentication/authorization failed with status code: %d", statusCode)
 	} else {
+		log.Printf("[HealthCheck] Provider ID=%d: Marked as UNHEALTHY (status %d)", providerID, statusCode)
 		provider.HealthStatus = "unhealthy"
 		provider.Latency = &latency
+		provider.LastStatusCode = &statusCode
 		provider.LastChecked = &now
 		hc.db.Save(&provider)
-		// Return error with status code for debugging
-		return fmt.Errorf("health check failed with status code: %d", resp.StatusCode)
+		return fmt.Errorf("health check failed with status code: %d", statusCode)
 	}
 
 	return nil

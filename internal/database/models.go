@@ -59,9 +59,10 @@ type Provider struct {
 	Priority     int        `gorm:"default:0" json:"priority"`      // Priority for failover (higher is first)
 	Weight       uint       `gorm:"default:100" json:"weight"`      // Weight for load balancing
 	Timeout      int        `gorm:"default:300" json:"timeout"`     // Timeout in seconds
-	HealthStatus string     `gorm:"type:varchar(50)" json:"healthStatus"` // Health status: healthy, unhealthy, unknown
-	Latency      *int64     `json:"latency"`                       // Latency in milliseconds (nullable)
-	LastChecked  *time.Time `json:"lastChecked"`                   // Last health check timestamp (nullable)
+	HealthStatus   string     `gorm:"type:varchar(50)" json:"healthStatus"` // Health status: healthy, unhealthy, unknown
+	Latency        *int64     `json:"latency"`                              // Latency in milliseconds (nullable)
+	LastStatusCode *int       `json:"lastStatusCode"`                       // HTTP status code from last health check (nullable)
+	LastChecked    *time.Time `json:"lastChecked"`                          // Last health check timestamp (nullable)
 }
 
 // ApiKey stores an individual API key for a provider.

@@ -255,17 +255,39 @@ export const Providers: React.FC = () => {
                         </td>
                         <td className="px-4 py-3">
                           {provider.healthStatus && (
-                            <Badge variant={provider.healthStatus === 'healthy' ? 'success' : provider.healthStatus === 'unhealthy' ? 'error' : 'warning'}>
-                              {provider.healthStatus === 'healthy' ? '健康' : provider.healthStatus === 'unhealthy' ? '不健康' : '未知'}
-                            </Badge>
+                            <div className="flex flex-col gap-1">
+                              <Badge variant={
+                                provider.healthStatus === 'healthy' ? 'success' :
+                                provider.healthStatus === 'degraded' ? 'warning' :
+                                provider.healthStatus === 'unhealthy' ? 'error' :
+                                'default'
+                              }>
+                                {provider.healthStatus === 'healthy' ? '健康' :
+                                 provider.healthStatus === 'degraded' ? '降级' :
+                                 provider.healthStatus === 'unhealthy' ? '不健康' :
+                                 '未知'}
+                              </Badge>
+                              {provider.lastStatusCode && (
+                                <span className="text-xs text-gray-500">
+                                  状态码: {provider.lastStatusCode}
+                                </span>
+                              )}
+                            </div>
                           )}
                         </td>
                         <td className="px-4 py-3">
                           <div className="text-sm text-gray-900">{provider.weight}</div>
                         </td>
                         <td className="px-4 py-3">
-                          <div className="text-sm text-gray-900">
-                            {provider.latency ? `${provider.latency}ms` : '-'}
+                          <div className="flex flex-col gap-1">
+                            <div className="text-sm text-gray-900">
+                              {provider.latency ? `${provider.latency}ms` : '-'}
+                            </div>
+                            {provider.lastChecked && (
+                              <span className="text-xs text-gray-500">
+                                {new Date(provider.lastChecked).toLocaleString('zh-CN')}
+                              </span>
+                            )}
                           </div>
                         </td>
                         <td className="px-4 py-3 text-right">

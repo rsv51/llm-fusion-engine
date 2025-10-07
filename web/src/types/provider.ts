@@ -17,8 +17,9 @@ export interface Provider {
   console?: string;
   enabled: boolean;
   weight: number;
-  healthStatus?: 'healthy' | 'unhealthy' | 'unknown';
+  healthStatus?: 'healthy' | 'unhealthy' | 'degraded' | 'unknown';
   lastChecked?: string;
+  lastStatusCode?: number; // HTTP status code from last health check
   latency?: number; // in milliseconds
   createdAt: string;
   updatedAt: string;
