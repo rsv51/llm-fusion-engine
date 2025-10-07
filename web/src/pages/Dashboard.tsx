@@ -143,7 +143,7 @@ export const Dashboard: React.FC = () => {
                   <div className="flex items-center gap-3">
                     <div className={`w-2 h-2 rounded-full ${provider.errorCount === 0 ? 'bg-green-500' : 'bg-yellow-500'}`}></div>
                     <div>
-                      <p className="font-medium text-gray-900">{provider.providerName}</p>
+                      <p className="font-medium text-gray-900">{provider.providerName || '未知提供商'}</p>
                       <p className="text-xs text-gray-500">响应时间: {provider.avgResponseTimeMs}ms</p>
                     </div>
                   </div>

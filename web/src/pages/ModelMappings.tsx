@@ -183,13 +183,13 @@ export const ModelMappings: React.FC = () => {
                     {filteredMappings.map((mapping) => (
                       <tr key={mapping.id} className="hover:bg-gray-50">
                         <td className="px-4 py-3">
-                          <div className="font-medium text-gray-900">{mapping.model?.name}</div>
+                          <div className="font-medium text-gray-900">{mapping.model?.name || 'N/A'}</div>
                         </td>
                         <td className="px-4 py-3">
                           <div className="text-sm text-gray-900">{mapping.providerModel}</div>
                         </td>
                         <td className="px-4 py-3">
-                          <div className="text-sm text-gray-900">{mapping.provider?.name} ({mapping.provider?.type})</div>
+                          <div className="text-sm text-gray-900">{mapping.provider?.name || 'N/A'} ({mapping.provider?.type || 'N/A'})</div>
                         </td>
                         <td className="px-4 py-3">
                           <div className="flex gap-1 flex-wrap">

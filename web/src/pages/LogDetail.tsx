@@ -15,7 +15,7 @@ export const LogDetail: React.FC = () => {
       const fetchLog = async () => {
         try {
           setLoading(true);
-          const response = await logsApi.getLog(id);
+          const response = await logsApi.getLog(id as string);
           setLog(response);
         } catch (err: any) {
           setError(err.message || 'Failed to fetch log details');
