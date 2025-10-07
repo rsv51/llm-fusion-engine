@@ -32,10 +32,9 @@ func (hc *HealthChecker) CheckProvider(providerID uint) error {
 	if err := json.Unmarshal([]byte(provider.Config), &config); err != nil {
 		// Update as unhealthy due to config error
 		now := time.Now()
-		hc.db.Model(&provider).Updates(map[string]interface{}{
-			"health_status": "unhealthy",
-			"last_checked":  &now,
-		})
+		provider.HealthStatus = "unhealthy"
+		provider.LastChecked = &now
+		hc.db.Save(&provider)
 		return err
 	}
 
@@ -43,10 +42,9 @@ func (hc *HealthChecker) CheckProvider(providerID uint) error {
 	if !ok || baseURL == "" {
 		// Update as unknown due to missing baseUrl
 		now := time.Now()
-		hc.db.Model(&provider).Updates(map[string]interface{}{
-			"health_status": "unknown",
-			"last_checked":  &now,
-		})
+		provider.HealthStatus = "unknown"
+		provider.LastChecked = &now
+		hc.db.Save(&provider)
 		return nil
 	}
 
@@ -58,28 +56,25 @@ func (hc *HealthChecker) CheckProvider(providerID uint) error {
 
 	if err != nil {
 		// Update as unhealthy due to request error
-		hc.db.Model(&provider).Updates(map[string]interface{}{
-			"health_status": "unhealthy",
-			"latency":       nil,
-			"last_checked":  &now,
-		})
+		provider.HealthStatus = "unhealthy"
+		provider.Latency = nil
+		provider.LastChecked = &now
+		hc.db.Save(&provider)
 		return err
 	}
 	defer resp.Body.Close()
 
 	// Update health status based on response
 	if resp.StatusCode >= 200 && resp.StatusCode < 400 {
-		hc.db.Model(&provider).Updates(map[string]interface{}{
-			"health_status": "healthy",
-			"latency":       &latency,
-			"last_checked":  &now,
-		})
+		provider.HealthStatus = "healthy"
+		provider.Latency = &latency
+		provider.LastChecked = &now
+		hc.db.Save(&provider)
 	} else {
-		hc.db.Model(&provider).Updates(map[string]interface{}{
-			"health_status": "unhealthy",
-			"latency":       &latency,
-			"last_checked":  &now,
-		})
+		provider.HealthStatus = "unhealthy"
+		provider.Latency = &latency
+		provider.LastChecked = &now
+		hc.db.Save(&provider)
 	}
 
 	return nil
