@@ -20,7 +20,14 @@ export const ModelMappings: React.FC = () => {
   const [loadingProviderModels, setLoadingProviderModels] = useState(false);
   useEffect(() => {
     loadData(1);
-  }, []);
+    
+    // 每60秒自动刷新数据
+    const interval = setInterval(() => {
+      loadData(page);
+    }, 60000);
+    
+    return () => clearInterval(interval);
+  }, [page]);
 
   const pickData = (resp: any) => {
     if (!resp) return { data: [], pagination: {} };
@@ -480,11 +487,17 @@ const ModelSelector: React.FC<{
   );
 };
 
-// 健康状态指示器组件 - 优化版本
+// 健康状态指示器组件 - 交通灯风格
 const HealthStatusIndicator: React.FC<{ provider?: Provider }> = ({ provider }) => {
   // 处理provider为空的情况
   if (!provider) {
-    return <Badge variant="default">暂无数据</Badge>;
+    return (
+      <div className="flex items-center gap-2">
+        <span className="px-2 py-1 rounded text-xs bg-gray-100 text-gray-600">
+          未知
+        </span>
+      </div>
+    );
   }
   
   // 标准化健康状态字符串（统一小写，去除空格）
@@ -492,7 +505,13 @@ const HealthStatusIndicator: React.FC<{ provider?: Provider }> = ({ provider }) 
   
   // 处理healthStatus为空或unknown的情况
   if (!healthStatus || healthStatus === 'unknown') {
-    return <Badge variant="default">未检查</Badge>;
+    return (
+      <div className="flex items-center gap-2">
+        <span className="px-2 py-1 rounded text-xs bg-gray-100 text-gray-600">
+          未检查
+        </span>
+      </div>
+    );
   }
 
   // 安全获取数值，处理null/undefined/0的情况
@@ -508,36 +527,47 @@ const HealthStatusIndicator: React.FC<{ provider?: Provider }> = ({ provider }) 
   // 创建工具提示文本
   const title = `状态: ${healthStatus}\n延迟: ${latencyText}\n上次检查: ${lastCheckedText}\nHTTP状态码: ${statusCodeText}`;
 
-  // 根据健康状态渲染不同的徽章
+  // 根据健康状态渲染不同的徽章 - 交通灯配色
   switch (healthStatus) {
     case 'healthy':
       return (
-        <div title={title}>
-          <Badge variant="success">
-            ✓ 健康 {latency !== null && `(${latency}ms)`}
-          </Badge>
+        <div className="flex items-center gap-2" title={title}>
+          <span className="px-2 py-1 rounded text-xs bg-green-100 text-green-800">
+            healthy
+          </span>
+          {latency !== null && (
+            <span className="text-xs text-gray-500">{latency}ms</span>
+          )}
         </div>
       );
     case 'degraded':
       return (
-        <div title={title}>
-          <Badge variant="warning">
-            ⚠ 降级 {latency !== null && `(${latency}ms)`}
-          </Badge>
+        <div className="flex items-center gap-2" title={title}>
+          <span className="px-2 py-1 rounded text-xs bg-yellow-100 text-yellow-800">
+            degraded
+          </span>
+          {latency !== null && (
+            <span className="text-xs text-gray-500">{latency}ms</span>
+          )}
         </div>
       );
     case 'unhealthy':
       return (
-        <div title={title}>
-          <Badge variant="error">
-            ✗ 不健康 {lastStatusCode !== null && `(${lastStatusCode})`}
-          </Badge>
+        <div className="flex items-center gap-2" title={title}>
+          <span className="px-2 py-1 rounded text-xs bg-red-100 text-red-800">
+            unhealthy
+          </span>
+          {lastStatusCode !== null && (
+            <span className="text-xs text-gray-500">{lastStatusCode}</span>
+          )}
         </div>
       );
     default:
       return (
-        <div title={title}>
-          <Badge variant="default">? 未知状态</Badge>
+        <div className="flex items-center gap-2" title={title}>
+          <span className="px-2 py-1 rounded text-xs bg-gray-100 text-gray-600">
+            {healthStatus}
+          </span>
         </div>
       );
   }
