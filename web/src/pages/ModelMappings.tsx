@@ -457,21 +457,27 @@ const HealthStatusIndicator: React.FC<{ provider?: Provider }> = ({ provider }) 
   switch (healthStatus) {
     case 'healthy':
       return (
-        <Badge variant="success" title={title}>
-          健康 {latency !== undefined && `(${latency}ms)`}
-        </Badge>
+        <div title={title}>
+          <Badge variant="success">
+            健康 {latency !== undefined && `(${latency}ms)`}
+          </Badge>
+        </div>
       );
     case 'degraded':
       return (
-        <Badge variant="warning" title={title}>
-          性能下降 {latency !== undefined && `(${latency}ms)`}
-        </Badge>
+        <div title={title}>
+          <Badge variant="warning">
+            性能下降 {latency !== undefined && `(${latency}ms)`}
+          </Badge>
+        </div>
       );
     case 'unhealthy':
       return (
-        <Badge variant="danger" title={title}>
-          不健康
-        </Badge>
+        <div title={title}>
+          <Badge variant="error">
+            不健康
+          </Badge>
+        </div>
       );
     default:
       return <Badge variant="default">未知</Badge>;
