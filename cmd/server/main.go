@@ -28,6 +28,8 @@ func main() {
 	keyManager := services.NewKeyManager(db)
 	providerRouter := services.NewProviderRouter(db, keyManager)
 	healthChecker := services.NewHealthChecker(db)
+	healthChecker.CheckAllProviders()                          // 启动时立即执行一次全面健康检查
+	healthChecker.SchedulePeriodicChecks(5 * time.Minute)      // 启动定期健康检查（每5分钟）
 	// TODO: Initialize ProviderFactory
 	// providerFactory := services.NewProviderFactory()
 	multiProviderService := services.NewMultiProviderService(providerRouter, nil, db) // Pass nil for factory for now
