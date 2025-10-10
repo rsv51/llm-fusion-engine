@@ -44,6 +44,42 @@ export const ModelMappings: React.FC = () => {
       const { data: modelsData } = pickData(modelsResponse);
       const { data: providersData } = pickData(providersResponse);
 
+      // 调试信息：打印原始响应数据
+      console.log('=== API响应调试信息 ===');
+      console.log('Providers原始响应:', providersResponse);
+      console.log('Providers处理后数据:', providersData);
+      
+      // 调试信息：检查提供商的健康状态数据
+      if (providersData && Array.isArray(providersData)) {
+        console.log('=== 提供商健康状态调试信息 ===');
+        providersData.forEach((provider, index) => {
+          console.log(`提供商 ${index + 1} (${provider.name}):`, {
+            id: provider.id,
+            name: provider.name,
+            type: provider.type,
+            healthStatus: provider.healthStatus,
+            latency: provider.latency,
+            lastChecked: provider.lastChecked,
+            lastStatusCode: provider.lastStatusCode
+          });
+        });
+      }
+
+      // 调试信息：检查映射数据中的提供商关联
+      if (mappingsData && Array.isArray(mappingsData)) {
+        console.log('=== 映射数据中的提供商关联调试信息 ===');
+        mappingsData.forEach((mapping, index) => {
+          console.log(`映射 ${index + 1}:`, {
+            id: mapping.id,
+            modelName: mapping.model?.name,
+            providerName: mapping.provider?.name,
+            providerHealthStatus: mapping.provider?.healthStatus,
+            providerLatency: mapping.provider?.latency,
+            providerLastChecked: mapping.provider?.lastChecked
+          });
+        });
+      }
+
       setMappings(mappingsData || []);
       setPage(mappingsPagination?.page || 1);
       setTotalPages(mappingsPagination?.totalPage || 1);
@@ -444,22 +480,41 @@ const ModelSelector: React.FC<{
   );
 };
 
-// 健康状态指示器组件
+// 健康状态指示器组件 - 优化版本
 const HealthStatusIndicator: React.FC<{ provider?: Provider }> = ({ provider }) => {
-  if (!provider || !provider.healthStatus || provider.healthStatus === 'unknown') {
+  // 处理provider为空的情况
+  if (!provider) {
     return <Badge variant="default">暂无数据</Badge>;
   }
+  
+  // 标准化健康状态字符串（统一小写，去除空格）
+  const healthStatus = provider.healthStatus?.toString().toLowerCase().trim() || '';
+  
+  // 处理healthStatus为空或unknown的情况
+  if (!healthStatus || healthStatus === 'unknown') {
+    return <Badge variant="default">未检查</Badge>;
+  }
 
-  const { healthStatus, latency, lastChecked } = provider;
+  // 安全获取数值，处理null/undefined/0的情况
+  const latency = typeof provider.latency === 'number' && provider.latency > 0 ? provider.latency : null;
+  const lastChecked = provider.lastChecked;
+  const lastStatusCode = typeof provider.lastStatusCode === 'number' ? provider.lastStatusCode : null;
 
-  const title = `延迟: ${latency ?? 'N/A'}ms\n上次检查: ${lastChecked ? new Date(lastChecked).toLocaleString() : 'N/A'}`;
+  // 格式化显示文本
+  const latencyText = latency !== null ? `${latency}ms` : 'N/A';
+  const lastCheckedText = lastChecked ? new Date(lastChecked).toLocaleString('zh-CN') : '从未检查';
+  const statusCodeText = lastStatusCode !== null ? lastStatusCode.toString() : 'N/A';
+  
+  // 创建工具提示文本
+  const title = `状态: ${healthStatus}\n延迟: ${latencyText}\n上次检查: ${lastCheckedText}\nHTTP状态码: ${statusCodeText}`;
 
+  // 根据健康状态渲染不同的徽章
   switch (healthStatus) {
     case 'healthy':
       return (
         <div title={title}>
           <Badge variant="success">
-            健康 {latency !== undefined && `(${latency}ms)`}
+            ✓ 健康 {latency !== null && `(${latency}ms)`}
           </Badge>
         </div>
       );
@@ -467,7 +522,7 @@ const HealthStatusIndicator: React.FC<{ provider?: Provider }> = ({ provider }) 
       return (
         <div title={title}>
           <Badge variant="warning">
-            性能下降 {latency !== undefined && `(${latency}ms)`}
+            ⚠ 降级 {latency !== null && `(${latency}ms)`}
           </Badge>
         </div>
       );
@@ -475,12 +530,16 @@ const HealthStatusIndicator: React.FC<{ provider?: Provider }> = ({ provider }) 
       return (
         <div title={title}>
           <Badge variant="error">
-            不健康
+            ✗ 不健康 {lastStatusCode !== null && `(${lastStatusCode})`}
           </Badge>
         </div>
       );
     default:
-      return <Badge variant="default">未知</Badge>;
+      return (
+        <div title={title}>
+          <Badge variant="default">? 未知状态</Badge>
+        </div>
+      );
   }
 };
 

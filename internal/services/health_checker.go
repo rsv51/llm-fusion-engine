@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"llm-fusion-engine/internal/constants"
 	"llm-fusion-engine/internal/database"
 	"log"
 	"net/http"
@@ -36,7 +37,7 @@ func (hc *HealthChecker) CheckProvider(providerID uint) error {
 	if err := json.Unmarshal([]byte(provider.Config), &config); err != nil {
 		// Update as unhealthy due to config error
 		now := time.Now()
-		provider.HealthStatus = "unhealthy"
+		provider.HealthStatus = string(constants.HealthStatusUnhealthy)
 		provider.LastChecked = &now
 		hc.db.Save(&provider)
 		return err
@@ -46,7 +47,7 @@ func (hc *HealthChecker) CheckProvider(providerID uint) error {
 	if !ok || baseURL == "" {
 		// Update as unknown due to missing baseUrl
 		now := time.Now()
-		provider.HealthStatus = "unknown"
+		provider.HealthStatus = string(constants.HealthStatusUnknown)
 		provider.LastChecked = &now
 		hc.db.Save(&provider)
 		return nil
@@ -84,7 +85,7 @@ func (hc *HealthChecker) CheckProvider(providerID uint) error {
 	if err != nil {
 		log.Printf("[HealthCheck] Provider ID=%d: Failed to marshal chat request: %v", providerID, err)
 		now := time.Now()
-		provider.HealthStatus = "unhealthy"
+		provider.HealthStatus = string(constants.HealthStatusUnhealthy)
 		provider.Latency = nil
 		provider.LastChecked = &now
 		hc.db.Save(&provider)
@@ -97,7 +98,7 @@ func (hc *HealthChecker) CheckProvider(providerID uint) error {
 	if err != nil {
 		log.Printf("[HealthCheck] Provider ID=%d: Failed to create chat request: %v", providerID, err)
 		now := time.Now()
-		provider.HealthStatus = "unhealthy"
+		provider.HealthStatus = string(constants.HealthStatusUnhealthy)
 		provider.Latency = nil
 		provider.LastChecked = &now
 		hc.db.Save(&provider)
@@ -118,7 +119,7 @@ func (hc *HealthChecker) CheckProvider(providerID uint) error {
 
 	if err != nil {
 		log.Printf("[HealthCheck] Provider ID=%d: Chat request error: %v", providerID, err)
-		provider.HealthStatus = "unhealthy"
+		provider.HealthStatus = string(constants.HealthStatusUnhealthy)
 		provider.Latency = nil
 		provider.LastChecked = &now
 		hc.db.Save(&provider)
@@ -139,7 +140,7 @@ func (hc *HealthChecker) CheckProvider(providerID uint) error {
 		var chatResponse map[string]interface{}
 		if err := json.Unmarshal(body, &chatResponse); err != nil {
 			log.Printf("[HealthCheck] Provider ID=%d: Failed to parse chat response: %v", providerID, err)
-			provider.HealthStatus = "degraded"
+			provider.HealthStatus = string(constants.HealthStatusDegraded)
 			provider.Latency = &latency
 			provider.LastStatusCode = &statusCode
 			provider.LastChecked = &now
@@ -151,7 +152,7 @@ func (hc *HealthChecker) CheckProvider(providerID uint) error {
 		choices, ok := chatResponse["choices"].([]interface{})
 		if !ok || len(choices) == 0 {
 			log.Printf("[HealthCheck] Provider ID=%d: No choices in chat response", providerID)
-			provider.HealthStatus = "degraded"
+			provider.HealthStatus = string(constants.HealthStatusDegraded)
 			provider.Latency = &latency
 			provider.LastStatusCode = &statusCode
 			provider.LastChecked = &now
@@ -162,7 +163,7 @@ func (hc *HealthChecker) CheckProvider(providerID uint) error {
 		firstChoice, ok := choices[0].(map[string]interface{})
 		if !ok {
 			log.Printf("[HealthCheck] Provider ID=%d: Invalid choice format", providerID)
-			provider.HealthStatus = "degraded"
+			provider.HealthStatus = string(constants.HealthStatusDegraded)
 			provider.Latency = &latency
 			provider.LastStatusCode = &statusCode
 			provider.LastChecked = &now
@@ -173,7 +174,7 @@ func (hc *HealthChecker) CheckProvider(providerID uint) error {
 		message, ok := firstChoice["message"].(map[string]interface{})
 		if !ok {
 			log.Printf("[HealthCheck] Provider ID=%d: No message in choice", providerID)
-			provider.HealthStatus = "degraded"
+			provider.HealthStatus = string(constants.HealthStatusDegraded)
 			provider.Latency = &latency
 			provider.LastStatusCode = &statusCode
 			provider.LastChecked = &now
@@ -184,7 +185,7 @@ func (hc *HealthChecker) CheckProvider(providerID uint) error {
 		content, ok := message["content"].(string)
 		if !ok || content == "" {
 			log.Printf("[HealthCheck] Provider ID=%d: Empty content in response", providerID)
-			provider.HealthStatus = "degraded"
+			provider.HealthStatus = string(constants.HealthStatusDegraded)
 			provider.Latency = &latency
 			provider.LastStatusCode = &statusCode
 			provider.LastChecked = &now
@@ -195,7 +196,7 @@ func (hc *HealthChecker) CheckProvider(providerID uint) error {
 		// Success - provider responded with actual content
 		log.Printf("[HealthCheck] Provider ID=%d: HEALTHY - Got valid response: '%s' (latency: %dms)",
 			providerID, content, latency)
-		provider.HealthStatus = "healthy"
+		provider.HealthStatus = string(constants.HealthStatusHealthy)
 		provider.Latency = &latency
 		provider.LastStatusCode = &statusCode
 		provider.LastChecked = &now
@@ -205,7 +206,7 @@ func (hc *HealthChecker) CheckProvider(providerID uint) error {
 	} else if statusCode == 401 || statusCode == 403 {
 		// Authentication/authorization errors
 		log.Printf("[HealthCheck] Provider ID=%d: DEGRADED (status %d - auth issue)", providerID, statusCode)
-		provider.HealthStatus = "degraded"
+		provider.HealthStatus = string(constants.HealthStatusDegraded)
 		provider.Latency = &latency
 		provider.LastStatusCode = &statusCode
 		provider.LastChecked = &now
@@ -213,7 +214,7 @@ func (hc *HealthChecker) CheckProvider(providerID uint) error {
 		return fmt.Errorf("authentication/authorization failed with status code: %d", statusCode)
 	} else {
 		log.Printf("[HealthCheck] Provider ID=%d: UNHEALTHY (status %d)", providerID, statusCode)
-		provider.HealthStatus = "unhealthy"
+		provider.HealthStatus = string(constants.HealthStatusUnhealthy)
 		provider.Latency = &latency
 		provider.LastStatusCode = &statusCode
 		provider.LastChecked = &now

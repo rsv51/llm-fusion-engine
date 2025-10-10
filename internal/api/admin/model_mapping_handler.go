@@ -1,7 +1,9 @@
 package admin
 
 import (
+	"encoding/json"
 	"llm-fusion-engine/internal/database"
+	"log"
 	"net/http"
 	"strconv"
 
@@ -62,7 +64,22 @@ func (h *ModelMappingHandler) GetModelMappings(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{
+	// 添加调试日志：记录返回的数据
+	log.Printf("[ModelMappings] Retrieved %d mappings (page %d, pageSize %d, total %d)",
+		len(mappings), page, pageSize, total)
+	
+	// 记录每个mapping的详细信息
+	for i, mapping := range mappings {
+		providerInfo := "nil"
+		if mapping.Provider != nil {
+			providerInfo = mapping.Provider.Name + " (health: " + mapping.Provider.HealthStatus + ")"
+		}
+		log.Printf("[ModelMappings] #%d: Model=%s, Provider=%s, ProviderModel=%s",
+			i+1, mapping.Model, providerInfo, mapping.ProviderModel)
+	}
+	
+	// 记录返回给前端的完整响应
+	responseData := gin.H{
 		"data": mappings,
 		"pagination": gin.H{
 			"page":      page,
@@ -70,7 +87,13 @@ func (h *ModelMappingHandler) GetModelMappings(c *gin.Context) {
 			"total":     total,
 			"totalPage": (total + int64(pageSize) - 1) / int64(pageSize),
 		},
-	})
+	}
+	
+	if jsonBytes, err := json.Marshal(responseData); err == nil {
+		log.Printf("[ModelMappings] Full response JSON: %s", string(jsonBytes))
+	}
+
+	c.JSON(http.StatusOK, responseData)
 }
 
 // GetModelMapping retrieves a single model mapping by ID.

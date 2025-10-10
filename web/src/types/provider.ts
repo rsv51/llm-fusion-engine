@@ -17,10 +17,10 @@ export interface Provider {
   console?: string;
   enabled: boolean;
   weight: number;
-  healthStatus?: 'healthy' | 'unhealthy' | 'degraded' | 'unknown';
-  lastChecked?: string;
-  lastStatusCode?: number; // HTTP status code from last health check
-  latency?: number; // in milliseconds
+  healthStatus?: 'healthy' | 'unhealthy' | 'degraded' | 'unknown' | '';
+  lastChecked?: string | null;
+  lastStatusCode?: number | null; // HTTP status code from last health check
+  latency?: number | null; // in milliseconds
   createdAt: string;
   updatedAt: string;
   // Note: ApiKeys are now part of the 'config' JSON string.
