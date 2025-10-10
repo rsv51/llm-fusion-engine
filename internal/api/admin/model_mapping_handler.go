@@ -71,7 +71,7 @@ func (h *ModelMappingHandler) GetModelMappings(c *gin.Context) {
 	// 记录每个mapping的详细信息
 	for i, mapping := range mappings {
 		providerInfo := "nil"
-		if mapping.Provider != nil {
+		if mapping.Provider.ID != 0 {
 			providerInfo = mapping.Provider.Name + " (health: " + mapping.Provider.HealthStatus + ")"
 		}
 		log.Printf("[ModelMappings] #%d: Model=%s, Provider=%s, ProviderModel=%s",
