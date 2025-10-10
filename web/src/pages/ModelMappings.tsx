@@ -18,11 +18,8 @@ export const ModelMappings: React.FC = () => {
   const [selectedProviderId, setSelectedProviderId] = useState<number | ''>('');
   const [providerModels, setProviderModels] = useState<string[]>([]);
   const [loadingProviderModels, setLoadingProviderModels] = useState(false);
-  const [healthStatusData, setHealthStatusData] = useState<Record<number, any[]>>({});
-
   useEffect(() => {
     loadData(1);
-    loadHealthStatus();
   }, []);
 
   const pickData = (resp: any) => {
@@ -60,16 +57,6 @@ export const ModelMappings: React.FC = () => {
     }
   };
 
-  const loadHealthStatus = async () => {
-    try {
-      const response = await api.get<Record<number, any[]>>('/admin/model-provider-mappings/health/all');
-      const healthData = response.data || response;
-      setHealthStatusData(healthData && typeof healthData === 'object' ? healthData : {});
-    } catch (error) {
-      console.error('加载健康状态失败:', error);
-      setHealthStatusData({});
-    }
-  };
 
   const handleCreate = () => {
     setEditingMapping(null);
@@ -195,7 +182,7 @@ export const ModelMappings: React.FC = () => {
                           <div className="text-sm text-gray-900">{mapping.weight}</div>
                         </td>
                         <td className="px-4 py-3">
-                          <HealthStatusIndicator healthStatus={healthStatusData?.[mapping?.id] || []} />
+                          <HealthStatusIndicator provider={mapping.provider} />
                         </td>
                         <td className="px-4 py-3">
                           <Badge variant={mapping.enabled ? 'success' : 'default'}>
@@ -458,39 +445,37 @@ const ModelSelector: React.FC<{
 };
 
 // 健康状态指示器组件
-interface HealthStatusIndicatorProps {
-  healthStatus: Array<{
-    timestamp: string;
-    status: 'success' | 'error';
-    statusCode: number;
-    latencyMs?: number;
-  }>;
-}
-
-const HealthStatusIndicator: React.FC<HealthStatusIndicatorProps> = ({ healthStatus }) => {
-  if (!healthStatus || !Array.isArray(healthStatus) || healthStatus.length === 0) {
-    return (
-      <div className="flex items-center gap-1">
-        <div className="text-xs text-gray-400">暂无数据</div>
-      </div>
-    );
+const HealthStatusIndicator: React.FC<{ provider?: Provider }> = ({ provider }) => {
+  if (!provider || !provider.healthStatus || provider.healthStatus === 'unknown') {
+    return <Badge variant="default">暂无数据</Badge>;
   }
 
-  return (
-    <div className="flex items-center gap-1" title="近期10次调用状态(最新→最旧)">
-      {healthStatus.slice(0, 10).map((status, index) => (
-        <div
-          key={index}
-          className={`w-3 h-3 rounded-full ${
-            status.status === 'success'
-              ? 'bg-green-500'
-              : 'bg-red-500'
-          }`}
-          title={`${status.status === 'success' ? '成功' : '失败'} (${status.statusCode})${status.latencyMs ? ` - ${status.latencyMs}ms` : ''}\n${new Date(status.timestamp).toLocaleString()}`}
-        />
-      ))}
-    </div>
-  );
+  const { healthStatus, latency, lastChecked } = provider;
+
+  const title = `延迟: ${latency ?? 'N/A'}ms\n上次检查: ${lastChecked ? new Date(lastChecked).toLocaleString() : 'N/A'}`;
+
+  switch (healthStatus) {
+    case 'healthy':
+      return (
+        <Badge variant="success" title={title}>
+          健康 {latency !== undefined && `(${latency}ms)`}
+        </Badge>
+      );
+    case 'degraded':
+      return (
+        <Badge variant="warning" title={title}>
+          性能下降 {latency !== undefined && `(${latency}ms)`}
+        </Badge>
+      );
+    case 'unhealthy':
+      return (
+        <Badge variant="danger" title={title}>
+          不健康
+        </Badge>
+      );
+    default:
+      return <Badge variant="default">未知</Badge>;
+  }
 };
 
 export default ModelMappings;
